@@ -12,6 +12,7 @@ import {
   type Agendamento,
 } from "@/lib/store";
 import { statusConfig } from "@/lib/agenda-config";
+import { AlertasEstoque } from "@/components/dashboard/alertas-estoque";
 
 // ─── Birthday helpers ─────────────────────────────────────────────────────────
 function daysFromNow(n: number) {
@@ -192,13 +193,13 @@ export default function Dashboard() {
     .slice(0, 5);
 
   return (
-    <div className="flex gap-6 min-h-0">
+    <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 min-h-0">
 
       {/* Left column */}
-      <div className="flex-1 min-w-0 space-y-6">
+      <div className="flex-1 min-w-0 space-y-4 lg:space-y-6">
 
         {/* Header */}
-        <div className="flex items-end justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
           <div>
             <p className="text-xs text-on-surface-variant font-body uppercase tracking-widest mb-1">Dashboard</p>
             <h1 className="font-display text-2xl font-bold text-on-surface">{greeting()}, Dra. Helena</h1>
@@ -217,7 +218,7 @@ export default function Dashboard() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
           {stats.map((s) => (
             <Link key={s.label} href={s.href} className="bg-surface-lowest rounded-2xl p-5 shadow-ambient hover:shadow-lg hover:scale-[1.02] transition-all group">
               <div className="flex items-start justify-between mb-3">
@@ -362,8 +363,11 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Right column */}
-      <div className="w-72 shrink-0 space-y-4 overflow-y-auto" style={{ maxHeight: "calc(100vh - 6rem)" }}>
+      {/* Right column — vira coluna abaixo do conteúdo principal no mobile */}
+      <div className="w-full lg:w-72 lg:shrink-0 space-y-4 lg:overflow-y-auto" style={{ maxHeight: "calc(100vh - 6rem)" }}>
+
+        {/* Alertas de estoque (só aparece se houver) */}
+        <AlertasEstoque />
 
         {/* Retornos previstos */}
         <div className="bg-surface-lowest rounded-2xl shadow-ambient overflow-hidden">

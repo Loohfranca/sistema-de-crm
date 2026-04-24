@@ -69,8 +69,9 @@ export function FinanceiroTable({
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-surface-lowest rounded-3xl shadow-ambient overflow-hidden">
+      {/* Table — scroll horizontal no mobile */}
+      <div className="bg-surface-lowest rounded-3xl shadow-ambient overflow-x-auto">
+        <div className="min-w-[720px]">
         {/* Header */}
         <div className="grid grid-cols-[2fr_auto_1fr_auto_1fr_1fr_auto] gap-4 px-6 py-4 bg-surface-low">
           <span className="text-xs font-semibold text-on-surface-variant font-body uppercase tracking-wider">
@@ -218,6 +219,7 @@ export function FinanceiroTable({
               Nenhum lançamento encontrado.
             </div>
           )}
+        </div>
         </div>
       </div>
     </div>

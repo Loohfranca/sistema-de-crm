@@ -3,10 +3,10 @@ import type { Servico } from "@/types/servico";
 const STORAGE_KEY = "crm_servicos_v1";
 
 const SERVICOS_PADRAO: Servico[] = [
-  { id: "s1", nome: "Limpeza de Pele Profissional", preco: 350, duracao: 60 },
-  { id: "s2", nome: "Aplicação de Botox — Frontal e Glabela", preco: 1500, duracao: 45 },
-  { id: "s3", nome: "Preenchimento Labial com Ácido Hialurônico", preco: 2200, duracao: 30 },
-  { id: "s4", nome: "Peeling Químico — Ácido Mandélico", preco: 450, duracao: 40 },
+  { id: "s1", nome: "Limpeza de Pele Profissional", preco: 350, duracao: 60, categoria: "Pele" },
+  { id: "s2", nome: "Aplicação de Botox — Frontal e Glabela", preco: 1500, duracao: 45, categoria: "Injetáveis" },
+  { id: "s3", nome: "Preenchimento Labial com Ácido Hialurônico", preco: 2200, duracao: 30, categoria: "Injetáveis" },
+  { id: "s4", nome: "Peeling Químico — Ácido Mandélico", preco: 450, duracao: 40, categoria: "Peeling" },
 ];
 
 export function getServicos(): Servico[] {

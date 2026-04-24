@@ -8,33 +8,13 @@ import {
   Save,
   Camera,
   CheckCircle2,
-  Sparkles,
-  Plus,
-  Pencil,
-  Trash2,
-  X,
-  Check,
 } from "lucide-react";
-import { useState, useEffect, useCallback } from "react";
-import {
-  getServicos,
-  adicionarServico,
-  editarServico,
-  removerServico,
-} from "@/lib/servicos";
-import type { Servico } from "@/types/servico";
+import { useState, useEffect } from "react";
+import { WhatsAppSection } from "@/components/configuracoes/whatsapp-section";
 
 export default function ConfiguracoesPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [showToast, setShowToast] = useState(false);
-
-  // Serviços
-  const [servicos, setServicos] = useState<Servico[]>([]);
-  const [editandoServico, setEditandoServico] = useState<Servico | null>(null);
-  const [novoServico, setNovoServico] = useState(false);
-  const [formServico, setFormServico] = useState({ nome: "", preco: "", duracao: "" });
-
-  const carregarServicos = useCallback(() => setServicos(getServicos()), []);
 
   // Form states com default
   const [perfil, setPerfil] = useState({
@@ -59,48 +39,7 @@ export default function ConfiguracoesPage() {
 
     if (savedPerfil) setPerfil(JSON.parse(savedPerfil));
     if (savedClinica) setClinica(JSON.parse(savedClinica));
-
-    carregarServicos();
-    window.addEventListener("crm_servicos_updated", carregarServicos);
-    return () => window.removeEventListener("crm_servicos_updated", carregarServicos);
-  }, [carregarServicos]);
-
-  function abrirNovoServico() {
-    setEditandoServico(null);
-    setFormServico({ nome: "", preco: "", duracao: "" });
-    setNovoServico(true);
-  }
-
-  function abrirEditarServico(s: Servico) {
-    setNovoServico(false);
-    setEditandoServico(s);
-    setFormServico({ nome: s.nome, preco: String(s.preco), duracao: String(s.duracao) });
-  }
-
-  function salvarServico() {
-    const preco = parseFloat(formServico.preco);
-    const duracao = parseInt(formServico.duracao);
-    if (!formServico.nome || isNaN(preco) || isNaN(duracao)) return;
-
-    if (editandoServico) {
-      setServicos(editarServico({ id: editandoServico.id, nome: formServico.nome, preco, duracao }));
-    } else {
-      setServicos(adicionarServico({ nome: formServico.nome, preco, duracao }));
-    }
-    setEditandoServico(null);
-    setNovoServico(false);
-    setFormServico({ nome: "", preco: "", duracao: "" });
-  }
-
-  function cancelarFormServico() {
-    setEditandoServico(null);
-    setNovoServico(false);
-    setFormServico({ nome: "", preco: "", duracao: "" });
-  }
-
-  function handleRemoverServico(id: string) {
-    setServicos(removerServico(id));
-  }
+  }, []);
 
   const handleSave = () => {
     setIsSaving(true);
@@ -149,9 +88,9 @@ export default function ConfiguracoesPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Settings */}
-        <div className="col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-6">
           {/* Profile */}
           <div className="bg-surface-lowest rounded-3xl p-6 shadow-ambient">
             <div className="flex items-center gap-2 mb-6">
@@ -171,7 +110,7 @@ export default function ConfiguracoesPage() {
                   <Camera className="w-3.5 h-3.5" />
                 </button>
               </div>
-              <div className="flex-1 grid grid-cols-2 gap-4">
+              <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-on-surface-variant font-body uppercase tracking-wider mb-2">
                     Nome Completo
@@ -228,7 +167,7 @@ export default function ConfiguracoesPage() {
                 Dados da Clínica
               </h2>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-on-surface-variant font-body uppercase tracking-wider mb-2">
                   Nome da Clínica
@@ -287,114 +226,8 @@ export default function ConfiguracoesPage() {
             </div>
           </div>
 
-          {/* Serviços / Procedimentos */}
-          <div className="bg-surface-lowest rounded-3xl p-6 shadow-ambient">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-primary" />
-                <h2 className="font-display text-lg font-bold text-on-surface">
-                  Serviços / Procedimentos
-                </h2>
-              </div>
-              <button
-                onClick={abrirNovoServico}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-full gradient-primary text-on-primary text-xs font-semibold font-body hover:opacity-90 transition-opacity"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                Adicionar
-              </button>
-            </div>
-
-            {/* Form inline (novo ou edição) */}
-            {(novoServico || editandoServico) && (
-              <div className="mb-4 p-4 rounded-2xl bg-surface-low border border-outline-variant/20">
-                <p className="text-xs font-semibold text-on-surface-variant font-body uppercase tracking-wider mb-3">
-                  {editandoServico ? "Editar serviço" : "Novo serviço"}
-                </p>
-                <div className="grid grid-cols-[2fr_1fr_1fr] gap-3 mb-3">
-                  <input
-                    type="text"
-                    placeholder="Nome do serviço"
-                    value={formServico.nome}
-                    onChange={(e) => setFormServico({ ...formServico, nome: e.target.value })}
-                    className="px-4 py-2.5 rounded-xl bg-surface-high text-on-surface text-sm font-body border border-transparent focus:border-primary/30 focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all"
-                  />
-                  <input
-                    type="number"
-                    placeholder="Preço (R$)"
-                    step="0.01"
-                    min="0"
-                    value={formServico.preco}
-                    onChange={(e) => setFormServico({ ...formServico, preco: e.target.value })}
-                    className="px-4 py-2.5 rounded-xl bg-surface-high text-on-surface text-sm font-body border border-transparent focus:border-primary/30 focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all"
-                  />
-                  <input
-                    type="number"
-                    placeholder="Duração (min)"
-                    min="1"
-                    value={formServico.duracao}
-                    onChange={(e) => setFormServico({ ...formServico, duracao: e.target.value })}
-                    className="px-4 py-2.5 rounded-xl bg-surface-high text-on-surface text-sm font-body border border-transparent focus:border-primary/30 focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all"
-                  />
-                </div>
-                <div className="flex gap-2 justify-end">
-                  <button
-                    onClick={cancelarFormServico}
-                    className="px-4 py-2 rounded-xl text-xs font-semibold font-body bg-surface-high text-on-surface-variant hover:bg-surface-highest transition-colors"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    onClick={salvarServico}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold font-body gradient-primary text-on-primary hover:opacity-90 transition-opacity"
-                  >
-                    <Check className="w-3.5 h-3.5" />
-                    {editandoServico ? "Salvar" : "Adicionar"}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Lista */}
-            <div className="space-y-2">
-              {servicos.length === 0 && (
-                <p className="text-sm text-on-surface-variant font-body text-center py-6">
-                  Nenhum serviço cadastrado. Adicione seus procedimentos acima.
-                </p>
-              )}
-              {servicos.map((s) => (
-                <div
-                  key={s.id}
-                  className="flex items-center gap-4 px-4 py-3 rounded-2xl bg-surface-low hover:bg-surface-container transition-colors group"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-on-surface font-body truncate">
-                      {s.nome}
-                    </p>
-                    <p className="text-xs text-on-surface-variant font-body">
-                      R$ {s.preco.toLocaleString("pt-BR", { minimumFractionDigits: 2 })} · {s.duracao} min
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={() => abrirEditarServico(s)}
-                      title="Editar"
-                      className="p-2 rounded-full text-on-surface-variant hover:bg-surface-high hover:text-primary transition-colors"
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => handleRemoverServico(s.id)}
-                      title="Excluir"
-                      className="p-2 rounded-full text-on-surface-variant hover:bg-error-container hover:text-on-error-container transition-colors"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          {/* WhatsApp */}
+          <WhatsAppSection />
 
           {/* Integrations */}
           <div className="bg-surface-lowest rounded-3xl p-6 shadow-ambient">
@@ -407,7 +240,7 @@ export default function ConfiguracoesPage() {
               </div>
             </div>
             
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Google Calendar */}
               <div className="p-5 rounded-2xl border border-outline-variant/20 bg-surface-low hover:bg-surface-high transition-colors">
                 <div className="flex items-center justify-between mb-4">
@@ -533,6 +366,7 @@ export default function ConfiguracoesPage() {
           </button>
         </div>
       </div>
+
     </div>
   );
 }

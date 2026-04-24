@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { motion } from "motion/react";
 import {
   X, Check, CreditCard, Banknote, Smartphone, Building2, Receipt,
 } from "lucide-react";
@@ -9,6 +10,9 @@ import {
   calcTaxa, formatBRL, TAXAS_METODO, TAXA_CREDITO_PARCELAS,
   type Pagamento, type Parcela,
 } from "@/lib/financeiro";
+import {
+  backdropTransition, backdropVariants, modalTransition, modalVariants,
+} from "@/lib/motion";
 
 const PAYMENT_METHODS = [
   { id: "dinheiro", label: "Dinheiro", icon: Banknote },
@@ -70,8 +74,23 @@ export function ComandaModal({ apt, onClose, onConfirm }: {
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-surface-lowest rounded-3xl w-full max-w-lg max-h-[90vh] flex flex-col shadow-2xl" style={{ animation: "tooltipIn 0.2s ease both" }}>
+      <motion.div
+        className="absolute inset-0 bg-black/30 backdrop-blur-sm"
+        onClick={onClose}
+        variants={backdropVariants}
+        initial="hidden"
+        animate="visible"
+        exit="hidden"
+        transition={backdropTransition}
+      />
+      <motion.div
+        className="relative bg-surface-lowest rounded-3xl w-full max-w-lg max-h-[90vh] flex flex-col shadow-2xl"
+        variants={modalVariants}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+        transition={modalTransition}
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-7 py-5 border-b border-outline-variant/20 shrink-0">
           <div className="flex items-center gap-3">
@@ -202,7 +221,7 @@ export function ComandaModal({ apt, onClose, onConfirm }: {
             Confirmar · receber {formatBRL(temTaxa ? liquido : totalBruto)}
           </button>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

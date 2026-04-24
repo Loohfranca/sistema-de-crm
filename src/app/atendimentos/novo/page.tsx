@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { AnimatePresence } from "motion/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -12,11 +13,15 @@ import {
   X,
   Save,
   FileText,
+  Phone,
 } from "lucide-react";
 import { getServicos } from "@/lib/servicos";
 import { getAgendamentos, salvarAgendamentos } from "@/lib/store";
 import { getClientes } from "@/lib/clientes";
+import type { Cliente } from "@/lib/clientes";
 import type { Servico } from "@/types/servico";
+import { WhatsAppConfirmacaoModal } from "@/components/agendamentos/whatsapp-confirmacao-modal";
+import type { ContextoMensagem } from "@/lib/whatsapp";
 
 const CORES = ["rose", "gold", "teal"] as const;
 
@@ -27,13 +32,19 @@ export default function NovoAtendimentoPage() {
 
   // Form state
   const [cliente, setCliente] = useState("");
+  const [telefone, setTelefone] = useState("");
   const [profissional, setProfissional] = useState("Dra. Helena");
   const [data, setData] = useState("");
   const [horario, setHorario] = useState("");
   const [observacoes, setObservacoes] = useState("");
 
-  // Clientes from localStorage
+  // Clientes from localStorage (nomes + objetos completos para auto-fill)
   const [clientesList, setClientesList] = useState<string[]>([]);
+  const [clientesObjs, setClientesObjs] = useState<Cliente[]>([]);
+
+  // Modal de confirmação WhatsApp após salvar
+  const [confirmacaoCtx, setConfirmacaoCtx] = useState<ContextoMensagem | null>(null);
+  const [confirmacaoTel, setConfirmacaoTel] = useState("");
 
   const carregar = useCallback(() => setServicos(getServicos()), []);
 
@@ -45,19 +56,28 @@ export default function NovoAtendimentoPage() {
 
   // Load clientes from clientes DB + agendamentos (merge unique names)
   useEffect(() => {
-    const nomesClientes = getClientes().map((c) => c.name);
+    const cadastrados = getClientes();
     const nomesAgendamentos = getAgendamentos().map((a) => a.cliente);
-    const nomes = [...new Set([...nomesClientes, ...nomesAgendamentos])].sort();
+    const nomes = [...new Set([...cadastrados.map((c) => c.name), ...nomesAgendamentos])].sort();
     setClientesList(nomes);
+    setClientesObjs(cadastrados);
 
     const sync = () => {
-      const updated = getClientes().map((c) => c.name);
+      const cad = getClientes();
       const fromApts = getAgendamentos().map((a) => a.cliente);
-      setClientesList([...new Set([...updated, ...fromApts])].sort());
+      setClientesList([...new Set([...cad.map((c) => c.name), ...fromApts])].sort());
+      setClientesObjs(cad);
     };
     window.addEventListener("crm_clientes_updated", sync);
     return () => window.removeEventListener("crm_clientes_updated", sync);
   }, []);
+
+  // Auto-fill telefone quando o cliente digitado corresponde a um cadastrado
+  useEffect(() => {
+    if (!cliente) return;
+    const match = clientesObjs.find((c) => c.name === cliente);
+    if (match?.phone && !telefone) setTelefone(match.phone);
+  }, [cliente, clientesObjs, telefone]);
 
   const toggleService = (id: string) => {
     setSelectedServices((prev) =>
@@ -95,6 +115,7 @@ export default function NovoAtendimentoPage() {
       duracao: selectedDuration,
       profissional,
       valor: selectedTotal,
+      telefone: telefone || undefined,
       observacoes: observacoes || undefined,
       cor: CORES[maxId % CORES.length],
       status: "agendado" as const,
@@ -102,6 +123,23 @@ export default function NovoAtendimentoPage() {
     };
 
     salvarAgendamentos([...lista, novo]);
+
+    // Abre modal de confirmação por WhatsApp em vez de redirecionar direto
+    setConfirmacaoCtx({
+      cliente,
+      dataISO: data,
+      horaInicio: hora,
+      minutoInicio: minuto,
+      procedimento: procedimentoNome,
+      duracao: selectedDuration,
+      profissional,
+    });
+    setConfirmacaoTel(telefone);
+  }
+
+  function fecharConfirmacao() {
+    setConfirmacaoCtx(null);
+    setConfirmacaoTel("");
     router.push("/agenda");
   }
 
@@ -124,9 +162,9 @@ export default function NovoAtendimentoPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Form - 2 columns */}
-        <div className="col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-6">
           {/* Client Selection */}
           <div className="bg-surface-lowest rounded-3xl p-6 shadow-ambient">
             <div className="flex items-center gap-2 mb-5">
@@ -135,7 +173,7 @@ export default function NovoAtendimentoPage() {
                 Dados da Cliente
               </h2>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-on-surface-variant font-body uppercase tracking-wider mb-2">
                   Cliente
@@ -166,6 +204,21 @@ export default function NovoAtendimentoPage() {
                   className="w-full px-4 py-3 rounded-2xl bg-surface-high text-on-surface text-sm font-body focus:outline-none focus:bg-surface-lowest focus:ring-2 focus:ring-primary/20 transition-all"
                 />
               </div>
+              <div className="col-span-2">
+                <label className="block text-xs font-semibold text-on-surface-variant font-body uppercase tracking-wider mb-2">
+                  Telefone <span className="text-outline font-normal">(para confirmação pelo WhatsApp)</span>
+                </label>
+                <div className="relative">
+                  <Phone className="w-4 h-4 text-on-surface-variant absolute left-4 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="tel"
+                    value={telefone}
+                    onChange={(e) => setTelefone(e.target.value)}
+                    placeholder="(11) 98765-4321"
+                    className="w-full pl-11 pr-4 py-3 rounded-2xl bg-surface-high text-on-surface text-sm font-body focus:outline-none focus:bg-surface-lowest focus:ring-2 focus:ring-primary/20 transition-all"
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
@@ -177,7 +230,7 @@ export default function NovoAtendimentoPage() {
                 Data e Horário
               </h2>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-on-surface-variant font-body uppercase tracking-wider mb-2">
                   Data
@@ -211,7 +264,7 @@ export default function NovoAtendimentoPage() {
                 Procedimentos
               </h2>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {servicos.length === 0 && (
                 <p className="col-span-2 text-sm text-on-surface-variant font-body text-center py-6">
                   Nenhum serviço cadastrado. Adicione em{" "}
@@ -360,6 +413,18 @@ export default function NovoAtendimentoPage() {
           </div>
         </div>
       </div>
+
+      {/* Modal de confirmação por WhatsApp */}
+      <AnimatePresence>
+        {confirmacaoCtx && (
+          <WhatsAppConfirmacaoModal
+            contexto={confirmacaoCtx}
+            telefoneInicial={confirmacaoTel}
+            onPular={fecharConfirmacao}
+            onEnviado={fecharConfirmacao}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

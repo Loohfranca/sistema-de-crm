@@ -81,7 +81,7 @@ export function FinanceiroSummary({
       </div>
 
       {/* Cards */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
         {stats.map((s) => (
           <div key={s.label} className="bg-surface-lowest rounded-2xl p-5 shadow-ambient">
             <div className="flex items-start justify-between mb-3">

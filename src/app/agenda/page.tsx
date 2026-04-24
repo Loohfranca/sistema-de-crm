@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useMemo } from "react";
+import { AnimatePresence } from "motion/react";
 import { ChevronLeft, ChevronRight, Plus, LayoutGrid, CalendarDays, Calendar } from "lucide-react";
 import Link from "next/link";
 import {
@@ -29,6 +30,15 @@ export default function AgendaPage() {
     window.addEventListener("crm_agenda_updated", carregar);
     return () => window.removeEventListener("crm_agenda_updated", carregar);
   }, [carregar]);
+
+  // No mobile, abre direto em visão "dia" (uma coluna, mais legível).
+  // Só ajusta no primeiro mount — se a usuária trocar manualmente, respeita.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.matchMedia("(max-width: 768px)").matches) {
+      setView("day");
+    }
+  }, []);
 
   // Set of dates that have appointments (for mini-calendar dots)
   const datesWithApts = useMemo(
@@ -87,9 +97,9 @@ export default function AgendaPage() {
   }
 
   return (
-    <div className="flex gap-6 h-[calc(100vh-4rem)]">
-      {/* Left panel */}
-      <div className="w-72 shrink-0 space-y-5 overflow-y-auto pb-4">
+    <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 lg:h-[calc(100vh-6rem)]">
+      {/* Left panel — escondido no mobile */}
+      <div className="hidden lg:block w-72 shrink-0 space-y-5 overflow-y-auto pb-4">
         <MiniCalendar selected={selectedDate} onSelect={setSelectedDate} datesWithApts={datesWithApts} />
 
         <div className="bg-surface-lowest rounded-3xl p-5 shadow-ambient space-y-4">
@@ -134,25 +144,25 @@ export default function AgendaPage() {
       {/* Calendar */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Toolbar */}
-        <div className="flex items-center justify-between mb-5">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4 md:mb-5">
           <div className="flex items-center gap-3">
             <button onClick={goToday} className="px-4 py-2 rounded-full bg-surface-highest text-on-surface text-sm font-semibold font-body hover:bg-surface-high transition-colors">Hoje</button>
             <div className="flex items-center gap-1">
               <button onClick={() => goNav(-1)} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-surface-high transition-colors text-on-surface-variant"><ChevronLeft className="w-4 h-4" /></button>
               <button onClick={() => goNav(1)} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-surface-high transition-colors text-on-surface-variant"><ChevronRight className="w-4 h-4" /></button>
             </div>
-            <span className="text-lg font-bold font-display text-on-surface">{navLabel}</span>
+            <span className="text-base md:text-lg font-bold font-display text-on-surface truncate">{navLabel}</span>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="flex bg-surface-highest rounded-2xl p-1 gap-1">
+          <div className="flex items-center gap-2 md:gap-3 overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0 md:overflow-visible">
+            <div className="flex bg-surface-highest rounded-2xl p-1 gap-1 shrink-0">
               {(([["week", LayoutGrid, "Semana"], ["day", CalendarDays, "Dia"], ["month", Calendar, "Mês"]] as const)).map(([v, Icon, label]) => (
-                <button key={v} onClick={() => setView(v)} className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold font-body transition-all ${view === v ? "bg-surface-lowest text-on-surface shadow-ambient" : "text-on-surface-variant hover:text-on-surface"}`}>
-                  <Icon className="w-4 h-4" />{label}
+                <button key={v} onClick={() => setView(v)} className={`flex items-center gap-1.5 px-3 md:px-4 py-2 rounded-xl text-sm font-semibold font-body transition-all ${view === v ? "bg-surface-lowest text-on-surface shadow-ambient" : "text-on-surface-variant hover:text-on-surface"}`}>
+                  <Icon className="w-4 h-4" /><span className="hidden sm:inline">{label}</span>
                 </button>
               ))}
             </div>
-            <Link href="/atendimentos/novo" className="flex items-center gap-2 px-5 py-2.5 rounded-full gradient-primary text-on-primary text-sm font-semibold font-body hover:opacity-90 transition-opacity">
-              <Plus className="w-4 h-4" />Agendar
+            <Link href="/atendimentos/novo" className="flex items-center gap-2 px-4 md:px-5 py-2.5 rounded-full gradient-primary text-on-primary text-sm font-semibold font-body hover:opacity-90 transition-opacity shrink-0">
+              <Plus className="w-4 h-4" /><span className="hidden sm:inline">Agendar</span>
             </Link>
           </div>
         </div>
@@ -274,13 +284,15 @@ export default function AgendaPage() {
       </div>
 
       {/* Side Panel */}
-      {panelApt && (
-        <SidePanel
-          apt={panelApt}
-          onClose={() => setPanelApt(null)}
-          onStatusChange={handleStatusChange}
-        />
-      )}
+      <AnimatePresence>
+        {panelApt && (
+          <SidePanel
+            apt={panelApt}
+            onClose={() => setPanelApt(null)}
+            onStatusChange={handleStatusChange}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

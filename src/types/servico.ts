@@ -3,4 +3,5 @@ export type Servico = {
   nome: string;
   preco: number;
   duracao: number; // minutos
+  categoria?: string;
 };

@@ -1,17 +1,20 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Plus } from "lucide-react";
+import { AnimatePresence } from "motion/react";
+import { Plus, Download } from "lucide-react";
 import { getLancamentos } from "@/lib/financeiro";
 import { getAgendamentos } from "@/lib/store";
 import type { Lancamento } from "@/types/financeiro";
 import { FinanceiroSummary } from "@/components/financeiro/financeiro-summary";
 import { FinanceiroTable } from "@/components/financeiro/financeiro-table";
 import { LancamentoModal, type AtendimentoOption } from "@/components/financeiro/lancamento-modal";
+import { ExportModal } from "@/components/financeiro/export-modal";
 
 export default function FinanceiroPage() {
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
   const [modalAberto, setModalAberto] = useState(false);
+  const [exportAberto, setExportAberto] = useState(false);
   const [editando, setEditando] = useState<Lancamento | undefined>();
   const [atendimentos, setAtendimentos] = useState<AtendimentoOption[]>([]);
 
@@ -76,7 +79,7 @@ export default function FinanceiroPage() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-end justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div>
           <p className="text-sm text-on-surface-variant font-body uppercase tracking-widest mb-1">
             Financeiro
@@ -88,13 +91,22 @@ export default function FinanceiroPage() {
             {lancamentos.length} lançamentos registrados
           </p>
         </div>
-        <button
-          onClick={abrirNovo}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-full gradient-primary text-on-primary text-sm font-semibold font-body hover:opacity-90 transition-opacity hover:scale-[1.02]"
-        >
-          <Plus className="w-4 h-4" />
-          Adicionar Lançamento
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setExportAberto(true)}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-surface-high text-on-surface text-sm font-semibold font-body hover:bg-surface-highest transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            Exportar
+          </button>
+          <button
+            onClick={abrirNovo}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-full gradient-primary text-on-primary text-sm font-semibold font-body hover:opacity-90 transition-opacity hover:scale-[1.02]"
+          >
+            <Plus className="w-4 h-4" />
+            Adicionar Lançamento
+          </button>
+        </div>
       </div>
 
       {/* Summary com navegação de mês */}
@@ -114,15 +126,28 @@ export default function FinanceiroPage() {
         onChanged={setLancamentos}
       />
 
-      {/* Modal */}
-      {modalAberto && (
-        <LancamentoModal
-          onClose={fecharModal}
-          onSaved={setLancamentos}
-          lancamento={editando}
-          atendimentos={atendimentos}
-        />
-      )}
+      {/* Modais */}
+      <AnimatePresence>
+        {modalAberto && (
+          <LancamentoModal
+            onClose={fecharModal}
+            onSaved={setLancamentos}
+            lancamento={editando}
+            atendimentos={atendimentos}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {exportAberto && (
+          <ExportModal
+            onClose={() => setExportAberto(false)}
+            lancamentos={lancamentos}
+            mesInicial={mes}
+            anoInicial={ano}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

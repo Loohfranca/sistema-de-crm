@@ -1,10 +1,14 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { motion } from "motion/react";
 import { X, Check, ArrowUpRight, ArrowDownRight, CreditCard, Info } from "lucide-react";
 import { adicionarLancamento, editarLancamento, formatBRL } from "@/lib/financeiro";
 import { MAQUININHAS, getTaxa, calcLiquido } from "@/lib/financeiro-taxas";
 import type { Lancamento, FormaPagamento, DadosCartao, QuemPagaTaxa } from "@/types/financeiro";
+import {
+  backdropTransition, backdropVariants, modalTransition, modalVariants,
+} from "@/lib/motion";
 
 export type AtendimentoOption = { id: string; label: string; valor: number; data: string };
 
@@ -150,10 +154,22 @@ export function LancamentoModal({
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
-      <div
+      <motion.div
+        className="absolute inset-0 bg-black/30 backdrop-blur-sm"
+        onClick={onClose}
+        variants={backdropVariants}
+        initial="hidden"
+        animate="visible"
+        exit="hidden"
+        transition={backdropTransition}
+      />
+      <motion.div
         className="relative bg-surface-lowest rounded-3xl w-full max-w-lg max-h-[90vh] flex flex-col shadow-2xl"
-        style={{ animation: "tooltipIn 0.2s ease both" }}
+        variants={modalVariants}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+        transition={modalTransition}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-7 py-5 border-b border-outline-variant/20 shrink-0">
@@ -455,7 +471,7 @@ export function LancamentoModal({
             </button>
           </div>
         </form>
-      </div>
+      </motion.div>
     </div>
   );
 }

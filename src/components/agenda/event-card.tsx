@@ -1,13 +1,20 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { motion } from "motion/react";
 import { colorMap, statusConfig, timeStr, endTime, CELL_H } from "@/lib/agenda-config";
 import type { Agendamento } from "@/lib/store";
+import { EASE_OUT_EXPO } from "@/lib/motion";
 
 function HoverTooltip({ apt }: { apt: Agendamento }) {
   const c = colorMap[apt.cor], sc = statusConfig[apt.status], StatusIcon = sc.icon;
   return (
-    <div style={{ position: "absolute", left: "calc(100% + 10px)", top: 0, zIndex: 50, width: 220, animation: "tooltipIn 0.18s ease both", pointerEvents: "none" }}>
+    <motion.div
+      initial={{ opacity: 0, y: 4 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.18, ease: EASE_OUT_EXPO }}
+      style={{ position: "absolute", left: "calc(100% + 10px)", top: 0, zIndex: 50, width: 220, pointerEvents: "none" }}
+    >
       <div style={{ position: "absolute", left: -6, top: 16, width: 0, height: 0, borderTop: "6px solid transparent", borderBottom: "6px solid transparent", borderRight: "6px solid white", filter: "drop-shadow(-1px 0 1px rgba(0,0,0,0.06))" }} />
       <div className="bg-surface-lowest rounded-2xl overflow-hidden" style={{ boxShadow: "0 8px 32px rgba(27,28,28,0.14)" }}>
         <div className={`${c.bg} ${c.border} border-l-4 px-4 py-3 flex items-center gap-3`}>
@@ -33,7 +40,7 @@ function HoverTooltip({ apt }: { apt: Agendamento }) {
         </div>
         <div className="px-4 pb-3"><p className="text-[9px] text-outline font-body">Clique para ver detalhes</p></div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 

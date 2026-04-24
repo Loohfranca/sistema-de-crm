@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import {
   ArrowLeft,
   Calendar,
@@ -14,8 +15,8 @@ import {
   Sparkles,
   Star,
   Diamond,
-  Camera,
 } from "lucide-react";
+import { GaleriaFotos } from "@/components/clientes/galeria-fotos";
 
 const clientData = {
   id: "1",
@@ -86,6 +87,9 @@ const treatmentHistory = [
 ];
 
 export default function ClienteDetailPage() {
+  const params = useParams();
+  const clienteId = String(params?.id ?? "1");
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -98,8 +102,8 @@ export default function ClienteDetailPage() {
           Voltar para clientes
         </Link>
 
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-5">
+        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+          <div className="flex items-center gap-4 md:gap-5">
             <div className="w-20 h-20 rounded-3xl bg-primary-fixed-dim flex items-center justify-center">
               <span className="text-2xl font-bold text-on-primary-fixed font-display">
                 IC
@@ -147,7 +151,7 @@ export default function ClienteDetailPage() {
       </div>
 
       {/* Stats Row */}
-      <div className="grid grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
         <div className="bg-surface-lowest rounded-3xl p-5 shadow-ambient">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 bg-secondary-fixed rounded-2xl flex items-center justify-center">
@@ -201,9 +205,9 @@ export default function ClienteDetailPage() {
       </div>
 
       {/* Main Content */}
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Treatment History - 2 cols */}
-        <div className="col-span-2 bg-surface-lowest rounded-3xl p-6 shadow-ambient">
+        <div className="lg:col-span-2 bg-surface-lowest rounded-3xl p-6 shadow-ambient">
           <h2 className="font-display text-lg font-bold text-on-surface mb-1">
             Histórico de Tratamentos
           </h2>
@@ -236,65 +240,7 @@ export default function ClienteDetailPage() {
             </div>
           </div>
 
-          {/* Galeria de Evolução / Antes e Depois */}
-          <div className="mt-6 bg-surface-lowest rounded-3xl p-6 shadow-ambient">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="font-display text-lg font-bold text-on-surface">
-                  Evolução Fotográfica
-                </h2>
-                <p className="text-sm text-on-surface-variant font-body mt-0.5">
-                  Registros de antes e depois dos procedimentos
-                </p>
-              </div>
-              <button className="flex items-center gap-2 px-4 py-2 rounded-full border border-outline-variant/30 text-xs font-semibold font-body text-on-surface hover:bg-surface-high transition-colors">
-                <Camera className="w-3.5 h-3.5" />
-                Adicionar Foto
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              {/* Photo Card 1 */}
-              <div className="group relative rounded-2xl overflow-hidden bg-surface-high">
-                <div className="aspect-[4/3] flex w-full">
-                   {/* Antes */}
-                   <div className="w-1/2 relative bg-surface-highest overflow-hidden border-r border-white/20">
-                     <img src="https://images.unsplash.com/photo-1515377905703-c4788e51af15?w=400&q=80" alt="Antes" className="w-full h-full object-cover grayscale opacity-80" />
-                     <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/40 backdrop-blur-md rounded-md text-[10px] text-white font-semibold font-body">Antes</div>
-                   </div>
-                   {/* Depois */}
-                   <div className="w-1/2 relative bg-surface-highest overflow-hidden">
-                     <img src="https://images.unsplash.com/photo-1515377905703-c4788e51af15?w=400&q=80" alt="Depois" className="w-full h-full object-cover" />
-                     <div className="absolute bottom-2 right-2 px-2 py-1 bg-primary/80 backdrop-blur-md rounded-md text-[10px] text-white font-semibold font-body">Depois</div>
-                   </div>
-                </div>
-                <div className="absolute top-0 inset-x-0 p-3 bg-gradient-to-b from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                  <p className="text-xs text-white font-semibold font-body">Preenchimento Labial</p>
-                  <p className="text-[10px] text-white/80 font-body">20/02/2026</p>
-                </div>
-              </div>
-
-              {/* Photo Card 2 */}
-              <div className="group relative rounded-2xl overflow-hidden bg-surface-high">
-                <div className="aspect-[4/3] flex w-full">
-                   {/* Antes */}
-                   <div className="w-1/2 relative bg-surface-highest overflow-hidden border-r border-white/20">
-                     <img src="https://images.unsplash.com/photo-1579684385127-1ef15d508118?w=400&q=80" alt="Antes" className="w-full h-full object-cover grayscale opacity-80" />
-                     <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/40 backdrop-blur-md rounded-md text-[10px] text-white font-semibold font-body">Antes</div>
-                   </div>
-                   {/* Depois */}
-                   <div className="w-1/2 relative bg-surface-highest overflow-hidden">
-                     <img src="https://images.unsplash.com/photo-1579684385127-1ef15d508118?w=400&q=80" alt="Depois" className="w-full h-full object-cover" />
-                     <div className="absolute bottom-2 right-2 px-2 py-1 bg-primary/80 backdrop-blur-md rounded-md text-[10px] text-white font-semibold font-body">Depois</div>
-                   </div>
-                </div>
-                <div className="absolute top-0 inset-x-0 p-3 bg-gradient-to-b from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                  <p className="text-xs text-white font-semibold font-body">Peeling Químico</p>
-                  <p className="text-[10px] text-white/80 font-body">15/12/2025</p>
-                </div>
-              </div>
-            </div>
-          </div>
+          <GaleriaFotos clienteId={clienteId} />
         </div>
 
         {/* Right column */}

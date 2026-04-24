@@ -1,9 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { motion } from "motion/react";
 import { X, Check, CalendarDays, Clock, Stethoscope, User, RotateCcw } from "lucide-react";
 import { colorMap, statusConfig, timeStr, endTime } from "@/lib/agenda-config";
 import type { Agendamento, StatusApt } from "@/lib/store";
+import {
+  backdropTransition,
+  backdropVariants,
+  sidePanelTransition,
+  sidePanelVariants,
+} from "@/lib/motion";
 
 export function SidePanel({ apt, onClose, onStatusChange }: {
   apt: Agendamento;
@@ -29,8 +36,24 @@ export function SidePanel({ apt, onClose, onStatusChange }: {
 
   return (
     <>
-      <div className="fixed inset-0 z-40 bg-black/10" onClick={onClose} />
-      <div className="fixed right-0 top-0 bottom-0 z-50 w-[400px] bg-surface-lowest flex flex-col" style={{ boxShadow: "-12px 0 48px rgba(27,28,28,0.12)", animation: "panelIn 0.25s cubic-bezier(0.16,1,0.3,1) both" }}>
+      <motion.div
+        className="fixed inset-0 z-40 bg-black/10"
+        onClick={onClose}
+        variants={backdropVariants}
+        initial="hidden"
+        animate="visible"
+        exit="hidden"
+        transition={backdropTransition}
+      />
+      <motion.div
+        className="fixed right-0 top-0 bottom-0 z-50 w-full sm:w-[400px] bg-surface-lowest flex flex-col"
+        style={{ boxShadow: "-12px 0 48px rgba(27,28,28,0.12)" }}
+        variants={sidePanelVariants}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+        transition={sidePanelTransition}
+      >
         {/* Header strip */}
         <div className={`${c.strip} border-l-4 px-6 py-5 flex items-start justify-between shrink-0`}>
           <div className="flex items-center gap-4">
@@ -78,7 +101,6 @@ export function SidePanel({ apt, onClose, onStatusChange }: {
             </div>
           )}
 
-          {/* Retorno info for already-realized appointments */}
           {apt.status === "realizado" && apt.retorno && (
             <div className="bg-secondary-fixed/30 rounded-2xl p-4">
               <div className="flex items-center gap-2 mb-1.5">
@@ -132,7 +154,7 @@ export function SidePanel({ apt, onClose, onStatusChange }: {
             </button>
           )}
         </div>
-      </div>
+      </motion.div>
     </>
   );
 }

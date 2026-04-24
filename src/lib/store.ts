@@ -1,6 +1,8 @@
 // ─── Shared Store — fonte única de verdade para Agenda + Atendimentos ─────────
 // Tipos financeiros (Pagamento, Parcela, taxas) foram movidos para src/lib/financeiro.ts
 
+import { consumirMateriais } from "./estoque";
+
 export type StatusApt = "agendado" | "realizado" | "cancelado";
 
 export interface Agendamento {
@@ -120,10 +122,17 @@ export function salvarAgendamentos(dados: Agendamento[]): void {
 
 export function atualizarStatus(id: number, status: StatusApt, retorno?: string): Agendamento[] {
   const lista = getAgendamentos();
+  const anterior = lista.find((a) => a.id === id);
   const nova = lista.map((a) =>
     a.id === id ? { ...a, status, ...(retorno ? { retorno } : {}) } : a
   );
   salvarAgendamentos(nova);
+
+  // Consumo de estoque ao transitar para "realizado"
+  if (anterior && anterior.status !== "realizado" && status === "realizado") {
+    consumirMateriais(anterior.procedimento);
+  }
+
   return nova;
 }
 

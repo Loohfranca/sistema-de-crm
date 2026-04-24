@@ -59,7 +59,7 @@ export default function AtendimentosPage() {
       </div>
 
       {/* Search & Filters */}
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
         <div className="flex-1 relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-on-surface-variant"/>
           <input
@@ -70,7 +70,7 @@ export default function AtendimentosPage() {
             className="w-full pl-12 pr-4 py-3 rounded-2xl bg-surface-high text-on-surface text-sm font-body placeholder:text-outline focus:outline-none focus:bg-surface-lowest focus:ring-2 focus:ring-primary/20 transition-all"
           />
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 sm:overflow-visible shrink-0">
           {[
             {id:"all",        label:"Todos"},
             {id:"agendado",   label:"Agendados"},
