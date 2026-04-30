@@ -38,6 +38,16 @@ export default function NovoAtendimentoPage() {
   const [horario, setHorario] = useState("");
   const [observacoes, setObservacoes] = useState("");
 
+  // Pré-preenche data/horário a partir da URL (?data=YYYY-MM-DD&horario=HH:MM)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const d = params.get("data");
+    const h = params.get("horario");
+    if (d) setData(d);
+    if (h) setHorario(h);
+  }, []);
+
   // Clientes from localStorage (nomes + objetos completos para auto-fill)
   const [clientesList, setClientesList] = useState<string[]>([]);
   const [clientesObjs, setClientesObjs] = useState<Cliente[]>([]);

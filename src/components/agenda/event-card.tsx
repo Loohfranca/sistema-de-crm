@@ -38,7 +38,7 @@ function HoverTooltip({ apt }: { apt: Agendamento }) {
             <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold font-body ${sc.cls}`}><StatusIcon className="w-3 h-3" />{sc.label}</span>
           </div>
         </div>
-        <div className="px-4 pb-3"><p className="text-[9px] text-outline font-body">Clique para ver detalhes</p></div>
+        <div className="px-4 pb-3"><p className="text-[9px] text-outline font-body">Arraste para mover · clique para detalhes</p></div>
       </div>
     </motion.div>
   );
@@ -49,18 +49,47 @@ export function EventCard({ apt, onClick }: { apt: Agendamento; onClick: () => v
   const top = (apt.horaInicio - 8) * CELL_H + (apt.minutoInicio / 60) * CELL_H;
   const height = Math.max((apt.duracao / 60) * CELL_H - 4, 28);
   const [hovered, setHovered] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  function handleDragStart(e: React.DragEvent<HTMLDivElement>) {
+    e.dataTransfer.setData("application/x-agendamento-id", String(apt.id));
+    e.dataTransfer.effectAllowed = "move";
+    setDragging(true);
+    setHovered(false);
+  }
+
+  function handleDragEnd() {
+    setDragging(false);
+  }
+
   return (
-    <div style={{ position: "absolute", top: `${top}px`, height: `${height}px`, left: 4, right: 4, zIndex: hovered ? 40 : 10 }}
-      onMouseEnter={() => { timer.current = setTimeout(() => setHovered(true), 180); }}
-      onMouseLeave={() => { if (timer.current) clearTimeout(timer.current); setHovered(false); }}>
-      <button onClick={onClick} className={`w-full h-full rounded-xl border-l-[3px] ${c.bg} ${c.border} ${c.text} px-2 py-1 text-left overflow-hidden hover:scale-[1.02] hover:shadow-md transition-all`}>
+    <div
+      draggable
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      style={{
+        position: "absolute",
+        top: `${top}px`,
+        height: `${height}px`,
+        left: 4,
+        right: 4,
+        zIndex: hovered ? 40 : 10,
+        opacity: dragging ? 0.4 : 1,
+        cursor: dragging ? "grabbing" : "grab",
+      }}
+      onMouseEnter={() => { if (!dragging) timer.current = setTimeout(() => setHovered(true), 180); }}
+      onMouseLeave={() => { if (timer.current) clearTimeout(timer.current); setHovered(false); }}
+    >
+      <button
+        onClick={(e) => { e.stopPropagation(); onClick(); }}
+        className={`w-full h-full rounded-xl border-l-[3px] ${c.bg} ${c.border} ${c.text} px-2 py-1 text-left overflow-hidden hover:scale-[1.02] hover:shadow-md transition-all`}
+      >
         <p className="text-[11px] font-semibold font-body truncate leading-tight">{apt.cliente}</p>
         {height > 36 && <p className="text-[10px] opacity-75 font-body truncate leading-tight">{apt.procedimento}</p>}
         {height > 52 && <p className="text-[10px] opacity-60 font-body">{timeStr(apt.horaInicio, apt.minutoInicio)} · {apt.duracao}min</p>}
       </button>
-      {hovered && <HoverTooltip apt={apt} />}
+      {hovered && !dragging && <HoverTooltip apt={apt} />}
     </div>
   );
 }

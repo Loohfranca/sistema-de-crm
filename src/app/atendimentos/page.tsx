@@ -1,14 +1,15 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
-import { Search, Calendar, Clock, AlertCircle } from "lucide-react";
+import { Search, Calendar, Clock, ChevronRight } from "lucide-react";
 import {
   getAgendamentos,
   isoParaBR,
   type Agendamento,
 } from "@/lib/store";
 import { statusConfig } from "@/lib/agenda-config";
+import { getClientes, type Cliente } from "@/lib/clientes";
 
 // ─── Badge de status ─────────────────────────────────────────────────────────
 function StatusBadge({ apt }: { apt: Agendamento }) {
@@ -24,16 +25,31 @@ function StatusBadge({ apt }: { apt: Agendamento }) {
 // ─── Página principal (somente leitura) ──────────────────────────────────────
 export default function AtendimentosPage() {
   const [lista, setLista]         = useState<Agendamento[]>([]);
+  const [clientes, setClientes]   = useState<Cliente[]>([]);
   const [search, setSearch]       = useState("");
   const [filterStatus, setFilter] = useState("all");
 
-  const carregar = useCallback(() => setLista(getAgendamentos()), []);
+  const carregar = useCallback(() => {
+    setLista(getAgendamentos());
+    setClientes(getClientes());
+  }, []);
 
   useEffect(() => {
     carregar();
     window.addEventListener("crm_agenda_updated", carregar);
-    return () => window.removeEventListener("crm_agenda_updated", carregar);
+    window.addEventListener("crm_clientes_updated", carregar);
+    return () => {
+      window.removeEventListener("crm_agenda_updated", carregar);
+      window.removeEventListener("crm_clientes_updated", carregar);
+    };
   }, [carregar]);
+
+  // Mapa nome → id para abrir ficha direto da listagem
+  const clienteIdPorNome = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const c of clientes) m.set(c.name.trim().toLowerCase(), c.id);
+    return m;
+  }, [clientes]);
 
   const filtered = lista.filter(a => {
     const matchSearch =
@@ -94,9 +110,20 @@ export default function AtendimentosPage() {
         {filtered.map(apt => {
           const dataFormatada = isoParaBR(apt.data);
           const hora = `${String(apt.horaInicio).padStart(2,"0")}:${String(apt.minutoInicio).padStart(2,"0")}`;
+          const clienteId = clienteIdPorNome.get(apt.cliente.trim().toLowerCase());
+          const Wrapper: React.ElementType = clienteId ? Link : "div";
+          const wrapperProps = clienteId
+            ? { href: `/clientes/${clienteId}`, title: `Abrir ficha de ${apt.cliente}` }
+            : {};
 
           return (
-            <div key={apt.id} className="bg-surface-lowest rounded-3xl shadow-ambient overflow-hidden">
+            <Wrapper
+              key={apt.id}
+              {...wrapperProps}
+              className={`block bg-surface-lowest rounded-3xl shadow-ambient overflow-hidden transition-all ${
+                clienteId ? "hover:shadow-md hover:-translate-y-0.5 group cursor-pointer" : ""
+              }`}
+            >
               <div className="flex items-center gap-5 px-5 py-4">
                 {/* Avatar */}
                 <div className="w-12 h-12 rounded-full bg-primary-fixed-dim flex items-center justify-center shrink-0">
@@ -106,7 +133,9 @@ export default function AtendimentosPage() {
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3 flex-wrap">
-                    <p className="text-base font-medium text-on-surface font-body">{apt.cliente}</p>
+                    <p className={`text-base font-medium text-on-surface font-body ${clienteId ? "group-hover:text-primary transition-colors" : ""}`}>
+                      {apt.cliente}
+                    </p>
                     <StatusBadge apt={apt} />
                   </div>
                   <p className="text-sm text-on-surface-variant font-body mt-0.5 truncate">{apt.procedimento}</p>
@@ -116,10 +145,14 @@ export default function AtendimentosPage() {
                 <div className="flex items-center gap-5 text-sm text-on-surface-variant font-body shrink-0">
                   <span className="flex items-center gap-1.5"><Calendar className="w-4 h-4"/>{dataFormatada}</span>
                   <span className="flex items-center gap-1.5"><Clock className="w-4 h-4"/>{hora}</span>
-                  <span className="text-xs text-outline">{apt.duracao} min</span>
+                  <span className="text-xs text-outline hidden md:inline">{apt.duracao} min</span>
                 </div>
+
+                {clienteId && (
+                  <ChevronRight className="w-4 h-4 text-outline-variant opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all shrink-0" />
+                )}
               </div>
-            </div>
+            </Wrapper>
           );
         })}
 

@@ -33,7 +33,7 @@ const PERFIL_PADRAO: Perfil = {
 };
 
 const CLINICA_PADRAO: Clinica = {
-  nome: "Gabelia Beauty Studio",
+  nome: "Studio Estética",
   cnpj: "12.345.678/0001-90",
   endereco: "Rua Oscar Freire, 2000 - Jardins, São Paulo - SP",
   telefone: "(11) 3000-0000",

@@ -3,6 +3,7 @@ import { Manrope, Inter } from "next/font/google";
 import "./globals.css";
 import { LayoutShell } from "@/components/layout-shell";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
+import { PALETTE_INIT_SCRIPT } from "@/lib/palette";
 
 const manrope = Manrope({
   variable: "--font-display",
@@ -17,7 +18,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Gabelia Beauty Studio | CRM",
+  title: "Studio Estética | CRM",
   description: "Sistema de gestão para clínicas de estética",
 };
 
@@ -30,6 +31,7 @@ export default function RootLayout({
     <html lang="pt-BR" className={`${manrope.variable} ${inter.variable} h-full antialiased`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: PALETTE_INIT_SCRIPT }} />
       </head>
       <body className="min-h-full flex bg-surface">
         <LayoutShell>{children}</LayoutShell>

@@ -120,6 +120,13 @@ export function salvarAgendamentos(dados: Agendamento[]): void {
   window.dispatchEvent(new Event("crm_agenda_updated"));
 }
 
+export function atualizarAgendamento(id: number, patch: Partial<Omit<Agendamento, "id">>): Agendamento[] {
+  const lista = getAgendamentos();
+  const atualizada = lista.map((a) => (a.id === id ? { ...a, ...patch } : a));
+  salvarAgendamentos(atualizada);
+  return atualizada;
+}
+
 export function atualizarStatus(id: number, status: StatusApt, retorno?: string): Agendamento[] {
   const lista = getAgendamentos();
   const anterior = lista.find((a) => a.id === id);

@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { WhatsAppSection } from "@/components/configuracoes/whatsapp-section";
+import { AparenciaSection } from "@/components/configuracoes/aparencia-section";
 
 export default function ConfiguracoesPage() {
   const [isSaving, setIsSaving] = useState(false);
@@ -25,7 +26,7 @@ export default function ConfiguracoesPage() {
   });
 
   const [clinica, setClinica] = useState({
-    nome: "Gabelia Beauty Studio",
+    nome: "Studio Estética",
     cnpj: "12.345.678/0001-90",
     endereco: "Rua Oscar Freire, 2000 - Jardins, São Paulo - SP",
     horario: "Seg-Sex 08:00 - 19:00",
@@ -87,6 +88,9 @@ export default function ConfiguracoesPage() {
           Gerencie seu perfil e preferências do sistema
         </p>
       </div>
+
+      {/* Aparência — full width acima do grid */}
+      <AparenciaSection />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Settings */}

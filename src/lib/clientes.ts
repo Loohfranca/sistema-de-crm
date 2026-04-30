@@ -54,3 +54,26 @@ export function adicionarCliente(cliente: Omit<Cliente, "id">): Cliente[] {
   salvarClientes(atualizada);
   return atualizada;
 }
+
+export function atualizarCliente(id: string, patch: Partial<Omit<Cliente, "id">>): Cliente[] {
+  const lista = getClientes();
+  const atualizada = lista.map((c) => (c.id === id ? { ...c, ...patch } : c));
+  salvarClientes(atualizada);
+  return atualizada;
+}
+
+export function excluirCliente(id: string): Cliente[] {
+  const lista = getClientes();
+  const atualizada = lista.filter((c) => c.id !== id);
+  salvarClientes(atualizada);
+  return atualizada;
+}
+
+export function getClientePorId(id: string): Cliente | undefined {
+  return getClientes().find((c) => c.id === id);
+}
+
+export function getClientePorNome(nome: string): Cliente | undefined {
+  const alvo = nome.trim().toLowerCase();
+  return getClientes().find((c) => c.name.trim().toLowerCase() === alvo);
+}

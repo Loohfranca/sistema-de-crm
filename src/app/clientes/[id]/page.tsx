@@ -1,150 +1,199 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import {
-  ArrowLeft,
-  Calendar,
-  Phone,
-  Mail,
-  MapPin,
-  AlertTriangle,
-  Heart,
-  Clock,
-  FileText,
-  Sparkles,
-  Star,
-  Diamond,
+  ArrowLeft, Calendar, Phone, Mail, MapPin, AlertTriangle, Heart,
+  Clock, Sparkles, Star, Diamond, Crown, Pencil, Trash2,
 } from "lucide-react";
 import { GaleriaFotos } from "@/components/clientes/galeria-fotos";
+import { ClienteFormModal } from "@/components/clientes/cliente-form-modal";
+import { ConfirmarExclusao } from "@/components/clientes/confirmar-exclusao";
+import {
+  getClientePorId, atualizarCliente, excluirCliente, type Cliente,
+} from "@/lib/clientes";
+import { getAgendamentos, isoParaBR, type Agendamento } from "@/lib/store";
+import { statusConfig } from "@/lib/agenda-config";
 
-const clientData = {
-  id: "1",
-  name: "Isabella Cavalcanti",
-  email: "isabella@email.com",
-  phone: "(11) 99876-5432",
-  address: "Rua das Flores, 123 - São Paulo, SP",
-  birthDate: "15/03/1992",
-  age: 34,
-  tier: "Paciente Diamante",
-  since: "Janeiro 2023",
-  totalProcedures: 34,
-  avgFrequency: "Mensal",
-  allergies: ["Látex", "Sulfonamidas"],
-  preferences: [
-    "Horários pela manhã",
-    "Aromaterapia de lavanda",
-    "Música ambiente suave",
-  ],
-  nextAppointment: {
-    date: "22 de Outubro",
-    time: "10:30",
-    procedure: "Limpeza de Pele Profissional + Peeling",
-  },
-};
+function tierInfo(tier: string) {
+  switch (tier) {
+    case "diamond":
+      return { label: "Paciente Diamante", Icon: Diamond, cls: "bg-primary-container text-on-primary-container" };
+    case "gold":
+      return { label: "Paciente Ouro", Icon: Crown, cls: "bg-secondary-container text-on-secondary-container" };
+    default:
+      return { label: "Paciente Prata", Icon: Star, cls: "bg-surface-highest text-on-surface-variant" };
+  }
+}
 
-const treatmentHistory = [
-  {
-    id: 1,
-    date: "09/04/2026",
-    procedure: "Bioestimulador de Colágeno Radiesse",
-    professional: "Dra. Helena",
-    status: "realizado",
-    notes: "Aplicação em malar e mandíbula. Paciente tolerou bem.",
-  },
-  {
-    id: 2,
-    date: "15/03/2026",
-    procedure: "Aplicação de Botox - Frontal e Glabela",
-    professional: "Dra. Helena",
-    status: "realizado",
-    notes: "40 unidades. Retorno em 15 dias para avaliação.",
-  },
-  {
-    id: 3,
-    date: "20/02/2026",
-    procedure: "Preenchimento Labial com Ácido Hialurônico",
-    professional: "Dra. Helena",
-    status: "realizado",
-    notes: "1ml Juvederm Ultra. Resultado natural conforme solicitado.",
-  },
-  {
-    id: 4,
-    date: "10/01/2026",
-    procedure: "Limpeza de Pele Profissional",
-    professional: "Dra. Helena",
-    status: "realizado",
-    notes: "Extração em zona T. Máscara calmante ao final.",
-  },
-  {
-    id: 5,
-    date: "15/12/2025",
-    procedure: "Peeling Químico - Ácido Mandélico",
-    professional: "Dra. Helena",
-    status: "realizado",
-    notes: "Sessão 3 de 4. Boa resposta ao tratamento.",
-  },
-];
+function calcAge(birthDate: string): number | null {
+  if (!birthDate) return null;
+  const d = new Date(birthDate);
+  if (isNaN(d.getTime())) return null;
+  const diffMs = Date.now() - d.getTime();
+  const age = new Date(diffMs).getUTCFullYear() - 1970;
+  return age >= 0 ? age : null;
+}
+
+function formatBirthDate(birthDate: string): string {
+  if (!birthDate) return "—";
+  const [y, m, d] = birthDate.split("-");
+  if (!y || !m || !d) return birthDate;
+  return `${d}/${m}/${y}`;
+}
 
 export default function ClienteDetailPage() {
   const params = useParams();
-  const clienteId = String(params?.id ?? "1");
+  const router = useRouter();
+  const clienteId = String(params?.id ?? "");
+
+  const [cliente, setCliente] = useState<Cliente | null>(null);
+  const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
+  const [editar, setEditar] = useState(false);
+  const [excluir, setExcluir] = useState(false);
+
+  useEffect(() => {
+    setCliente(getClientePorId(clienteId) ?? null);
+    setAgendamentos(getAgendamentos());
+    const syncCliente = () => setCliente(getClientePorId(clienteId) ?? null);
+    const syncAgenda = () => setAgendamentos(getAgendamentos());
+    window.addEventListener("crm_clientes_updated", syncCliente);
+    window.addEventListener("crm_agenda_updated", syncAgenda);
+    return () => {
+      window.removeEventListener("crm_clientes_updated", syncCliente);
+      window.removeEventListener("crm_agenda_updated", syncAgenda);
+    };
+  }, [clienteId]);
+
+  // Atendimentos da cliente — match por nome (não há FK ainda)
+  const meusAtendimentos = useMemo(() => {
+    if (!cliente) return [];
+    const alvo = cliente.name.trim().toLowerCase();
+    return agendamentos
+      .filter((a) => a.cliente.trim().toLowerCase() === alvo)
+      .sort((a, b) => b.data.localeCompare(a.data) || b.horaInicio - a.horaInicio);
+  }, [cliente, agendamentos]);
+
+  const realizados = meusAtendimentos.filter((a) => a.status === "realizado");
+  const proximoApt = meusAtendimentos
+    .filter((a) => a.status === "agendado" && a.data >= new Date().toISOString().slice(0, 10))
+    .sort((a, b) => a.data.localeCompare(b.data) || a.horaInicio - b.horaInicio)[0];
+
+  const idade = cliente ? calcAge(cliente.birthDate) : null;
+
+  if (!cliente) {
+    return (
+      <div className="space-y-6">
+        <Link href="/clientes" className="inline-flex items-center gap-2 text-sm text-on-surface-variant font-body hover:text-primary transition-colors">
+          <ArrowLeft className="w-4 h-4" />Voltar para clientes
+        </Link>
+        <div className="bg-surface-lowest rounded-3xl p-10 text-center shadow-ambient">
+          <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-surface-high flex items-center justify-center">
+            <AlertTriangle className="w-6 h-6 text-on-surface-variant" />
+          </div>
+          <p className="font-display text-lg font-bold text-on-surface">Cliente não encontrada</p>
+          <p className="text-sm text-on-surface-variant font-body mt-1">
+            A ficha pode ter sido removida ou o link está desatualizado.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const tier = tierInfo(cliente.tier);
+  const TierIcon = tier.Icon;
+
+  function handleEditarSave(updated: Cliente) {
+    const { id, ...rest } = updated;
+    atualizarCliente(id, rest);
+    setCliente(getClientePorId(id) ?? null);
+    setEditar(false);
+  }
+
+  function handleExcluirConfirm() {
+    excluirCliente(cliente!.id);
+    setExcluir(false);
+    router.push("/clientes");
+  }
 
   return (
     <div className="space-y-8">
+      {editar && (
+        <ClienteFormModal
+          mode="edit"
+          initial={cliente}
+          onClose={() => setEditar(false)}
+          onSave={handleEditarSave}
+        />
+      )}
+      {excluir && (
+        <ConfirmarExclusao
+          clienteName={cliente.name}
+          onCancel={() => setExcluir(false)}
+          onConfirm={handleExcluirConfirm}
+        />
+      )}
+
       {/* Header */}
       <div>
         <Link
           href="/clientes"
           className="inline-flex items-center gap-2 text-sm text-on-surface-variant font-body hover:text-primary transition-colors mb-4"
         >
-          <ArrowLeft className="w-4 h-4" />
-          Voltar para clientes
+          <ArrowLeft className="w-4 h-4" />Voltar para clientes
         </Link>
 
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
           <div className="flex items-center gap-4 md:gap-5">
-            <div className="w-20 h-20 rounded-3xl bg-primary-fixed-dim flex items-center justify-center">
-              <span className="text-2xl font-bold text-on-primary-fixed font-display">
-                IC
-              </span>
+            <div className="w-20 h-20 rounded-3xl bg-primary-fixed-dim flex items-center justify-center shrink-0">
+              <span className="text-2xl font-bold text-on-primary-fixed font-display">{cliente.avatar}</span>
             </div>
             <div>
-              <div className="flex items-center gap-3">
-                <h1 className="font-display text-3xl font-bold text-on-surface">
-                  {clientData.name}
+              <div className="flex items-center gap-3 flex-wrap">
+                <h1 className="font-display text-2xl md:text-3xl font-bold text-on-surface">
+                  {cliente.name}
                 </h1>
-                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-primary-container text-on-primary-container">
-                  <Diamond className="w-3 h-3" />
-                  {clientData.tier}
+                <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${tier.cls}`}>
+                  <TierIcon className="w-3 h-3" />{tier.label}
                 </span>
               </div>
               <p className="text-on-surface-variant font-body mt-1">
-                {clientData.age} anos &bull; Cliente desde {clientData.since}
+                {idade !== null ? `${idade} anos` : "Idade não informada"}
+                {cliente.lastVisit && cliente.lastVisit !== "-" && ` • Última visita: ${cliente.lastVisit}`}
               </p>
-              <div className="flex items-center gap-4 mt-2">
-                <span className="flex items-center gap-1.5 text-sm text-on-surface-variant font-body">
-                  <Phone className="w-3.5 h-3.5" />
-                  {clientData.phone}
-                </span>
-                <span className="flex items-center gap-1.5 text-sm text-on-surface-variant font-body">
-                  <Mail className="w-3.5 h-3.5" />
-                  {clientData.email}
-                </span>
+              <div className="flex items-center gap-4 mt-2 flex-wrap">
+                {cliente.phone && (
+                  <span className="flex items-center gap-1.5 text-sm text-on-surface-variant font-body">
+                    <Phone className="w-3.5 h-3.5" />{cliente.phone}
+                  </span>
+                )}
+                {cliente.email && (
+                  <span className="flex items-center gap-1.5 text-sm text-on-surface-variant font-body">
+                    <Mail className="w-3.5 h-3.5" />{cliente.email}
+                  </span>
+                )}
               </div>
             </div>
           </div>
-          <div className="flex gap-3">
-            <button className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-surface-lowest text-on-surface text-sm font-medium font-body ghost-border hover:bg-surface-high transition-colors">
-              <FileText className="w-4 h-4" />
-              Gerar PDF
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setEditar(true)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-surface-lowest text-on-surface text-sm font-medium font-body ghost-border hover:bg-surface-high transition-colors"
+            >
+              <Pencil className="w-4 h-4" />Editar
+            </button>
+            <button
+              onClick={() => setExcluir(true)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-error-container/60 text-on-error-container text-sm font-medium font-body hover:bg-error-container transition-colors"
+            >
+              <Trash2 className="w-4 h-4" />Excluir
             </button>
             <Link
               href="/atendimentos/novo"
-              className="flex items-center gap-2 px-5 py-2.5 rounded-full gradient-primary text-on-primary text-sm font-semibold font-body hover:opacity-90 transition-opacity"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-full gradient-primary text-on-primary text-sm font-semibold font-body hover:opacity-90 transition-opacity"
             >
-              <Calendar className="w-4 h-4" />
-              Agendar
+              <Calendar className="w-4 h-4" />Agendar
             </Link>
           </div>
         </div>
@@ -154,29 +203,21 @@ export default function ClienteDetailPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
         <div className="bg-surface-lowest rounded-3xl p-5 shadow-ambient">
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 bg-secondary-fixed rounded-2xl flex items-center justify-center">
-              <Calendar className="w-5 h-5 text-on-secondary-container" />
-            </div>
-          </div>
-          <p className="font-display text-xl font-bold text-on-surface">
-            {clientData.since}
-          </p>
-          <p className="text-xs text-on-surface-variant font-body mt-0.5">
-            Cliente desde
-          </p>
-        </div>
-        <div className="bg-surface-lowest rounded-3xl p-5 shadow-ambient">
-          <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 bg-primary-fixed rounded-2xl flex items-center justify-center">
               <Sparkles className="w-5 h-5 text-on-primary-container" />
             </div>
           </div>
-          <p className="font-display text-xl font-bold text-on-surface">
-            {clientData.totalProcedures}
-          </p>
-          <p className="text-xs text-on-surface-variant font-body mt-0.5">
-            Procedimentos
-          </p>
+          <p className="font-display text-xl font-bold text-on-surface">{realizados.length}</p>
+          <p className="text-xs text-on-surface-variant font-body mt-0.5">Procedimentos realizados</p>
+        </div>
+        <div className="bg-surface-lowest rounded-3xl p-5 shadow-ambient">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 bg-secondary-fixed rounded-2xl flex items-center justify-center">
+              <Calendar className="w-5 h-5 text-on-secondary-container" />
+            </div>
+          </div>
+          <p className="font-display text-xl font-bold text-on-surface">{meusAtendimentos.length}</p>
+          <p className="text-xs text-on-surface-variant font-body mt-0.5">Total de atendimentos</p>
         </div>
         <div className="bg-surface-lowest rounded-3xl p-5 shadow-ambient">
           <div className="flex items-center gap-3 mb-2">
@@ -185,11 +226,9 @@ export default function ClienteDetailPage() {
             </div>
           </div>
           <p className="font-display text-xl font-bold text-on-surface">
-            {clientData.avgFrequency}
+            {cliente.lastVisit && cliente.lastVisit !== "-" ? cliente.lastVisit : "—"}
           </p>
-          <p className="text-xs text-on-surface-variant font-body mt-0.5">
-            Frequência Média
-          </p>
+          <p className="text-xs text-on-surface-variant font-body mt-0.5">Última visita</p>
         </div>
         <div className="bg-surface-lowest rounded-3xl p-5 shadow-ambient">
           <div className="flex items-center gap-3 mb-2">
@@ -197,137 +236,164 @@ export default function ClienteDetailPage() {
               <Star className="w-5 h-5 text-on-primary-container" />
             </div>
           </div>
-          <p className="font-display text-xl font-bold text-on-surface">4.9</p>
-          <p className="text-xs text-on-surface-variant font-body mt-0.5">
-            Satisfação
+          <p className="font-display text-xl font-bold text-on-surface capitalize">
+            {cliente.tier === "diamond" ? "Diamante" : cliente.tier === "gold" ? "Ouro" : "Prata"}
           </p>
+          <p className="text-xs text-on-surface-variant font-body mt-0.5">Categoria</p>
         </div>
       </div>
 
       {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Treatment History - 2 cols */}
+        {/* Histórico — 2 cols */}
         <div className="lg:col-span-2 bg-surface-lowest rounded-3xl p-6 shadow-ambient">
           <h2 className="font-display text-lg font-bold text-on-surface mb-1">
             Histórico de Tratamentos
           </h2>
           <p className="text-sm text-on-surface-variant font-body mb-6">
-            Todos os procedimentos realizados
+            Todos os procedimentos {meusAtendimentos.length > 0 && `(${meusAtendimentos.length})`}
           </p>
 
-          {/* Timeline */}
-          <div className="relative">
-            <div className="absolute left-5 top-0 bottom-0 w-px bg-outline-variant/20" />
-            <div className="space-y-6">
-              {treatmentHistory.map((item) => (
-                <div key={item.id} className="relative flex gap-4 pl-10">
-                  <div className="absolute left-3.5 top-1 w-3 h-3 rounded-full bg-primary ring-4 ring-primary-fixed" />
-                  <div className="flex-1 p-4 rounded-2xl bg-surface-low">
-                    <div className="mb-2">
-                      <p className="text-sm font-medium text-on-surface font-body">
-                        {item.procedure}
-                      </p>
-                      <p className="text-xs text-on-surface-variant font-body mt-0.5">
-                        {item.professional} &bull; {item.date}
-                      </p>
-                    </div>
-                    <p className="text-xs text-outline font-body">
-                      {item.notes}
-                    </p>
-                  </div>
-                </div>
-              ))}
+          {meusAtendimentos.length === 0 ? (
+            <div className="py-10 text-center">
+              <div className="w-12 h-12 mx-auto mb-3 rounded-2xl bg-surface-high flex items-center justify-center">
+                <Clock className="w-5 h-5 text-on-surface-variant" />
+              </div>
+              <p className="text-sm font-semibold text-on-surface font-body">Sem atendimentos ainda</p>
+              <p className="text-xs text-on-surface-variant font-body mt-1 mb-4">
+                Os procedimentos agendados ou realizados aparecerão aqui.
+              </p>
+              <Link
+                href="/atendimentos/novo"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full gradient-primary text-on-primary text-xs font-semibold font-body hover:opacity-90 transition-opacity"
+              >
+                <Calendar className="w-3.5 h-3.5" />Agendar primeiro
+              </Link>
             </div>
-          </div>
+          ) : (
+            <div className="relative">
+              <div className="absolute left-5 top-0 bottom-0 w-px bg-outline-variant/20" />
+              <div className="space-y-6">
+                {meusAtendimentos.map((apt) => {
+                  const sc = statusConfig[apt.status];
+                  const StatusIcon = sc.icon;
+                  return (
+                    <div key={apt.id} className="relative flex gap-4 pl-10">
+                      <div className={`absolute left-3.5 top-1 w-3 h-3 rounded-full ring-4 ${
+                        apt.status === "realizado" ? "bg-secondary ring-secondary-container" :
+                        apt.status === "cancelado" ? "bg-error ring-error-container" :
+                        "bg-primary ring-primary-fixed"
+                      }`} />
+                      <div className="flex-1 p-4 rounded-2xl bg-surface-low">
+                        <div className="flex items-start justify-between gap-3 mb-1.5 flex-wrap">
+                          <p className="text-sm font-medium text-on-surface font-body">{apt.procedimento}</p>
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold font-body ${sc.cls}`}>
+                            <StatusIcon className="w-2.5 h-2.5" />{sc.label}
+                          </span>
+                        </div>
+                        <p className="text-xs text-on-surface-variant font-body">
+                          {apt.profissional} • {isoParaBR(apt.data)} às{" "}
+                          {String(apt.horaInicio).padStart(2, "0")}:{String(apt.minutoInicio).padStart(2, "0")}
+                        </p>
+                        {apt.observacoes && (
+                          <p className="text-xs text-outline font-body mt-2">{apt.observacoes}</p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           <GaleriaFotos clienteId={clienteId} />
         </div>
 
-        {/* Right column */}
+        {/* Sidebar */}
         <div className="space-y-6">
-          {/* Next Appointment */}
-          <div className="bg-surface-lowest rounded-3xl p-6 shadow-ambient">
-            <h3 className="font-display text-base font-bold text-on-surface mb-4">
-              Próximo Agendamento
-            </h3>
-            <div className="p-4 rounded-2xl gradient-primary text-on-primary">
-              <div className="flex items-center gap-2 mb-2">
-                <Calendar className="w-4 h-4" />
-                <span className="text-sm font-semibold font-body">
-                  {clientData.nextAppointment.date}
-                </span>
-                <span className="text-sm font-body opacity-80">
-                  às {clientData.nextAppointment.time}
-                </span>
-              </div>
-              <p className="text-sm font-body opacity-90">
-                {clientData.nextAppointment.procedure}
-              </p>
-            </div>
-          </div>
-
-          {/* Allergies */}
-          <div className="bg-surface-lowest rounded-3xl p-6 shadow-ambient">
-            <div className="flex items-center gap-2 mb-4">
-              <AlertTriangle className="w-4 h-4 text-error" />
-              <h3 className="font-display text-base font-bold text-on-surface">
-                Alergias Documentadas
+          {proximoApt && (
+            <div className="bg-surface-lowest rounded-3xl p-6 shadow-ambient">
+              <h3 className="font-display text-base font-bold text-on-surface mb-4">
+                Próximo Agendamento
               </h3>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {clientData.allergies.map((allergy) => (
-                <span
-                  key={allergy}
-                  className="px-3 py-1.5 rounded-full text-xs font-semibold bg-error-container text-on-error-container font-body"
-                >
-                  {allergy}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          {/* Preferences */}
-          <div className="bg-surface-lowest rounded-3xl p-6 shadow-ambient">
-            <div className="flex items-center gap-2 mb-4">
-              <Heart className="w-4 h-4 text-primary" />
-              <h3 className="font-display text-base font-bold text-on-surface">
-                Preferências
-              </h3>
-            </div>
-            <div className="space-y-2">
-              {clientData.preferences.map((pref) => (
-                <div
-                  key={pref}
-                  className="px-4 py-2.5 rounded-2xl bg-surface-low text-sm text-on-surface-variant font-body"
-                >
-                  {pref}
+              <div className="p-4 rounded-2xl gradient-primary text-on-primary">
+                <div className="flex items-center gap-2 mb-2">
+                  <Calendar className="w-4 h-4" />
+                  <span className="text-sm font-semibold font-body">{isoParaBR(proximoApt.data)}</span>
+                  <span className="text-sm font-body opacity-80">
+                    às {String(proximoApt.horaInicio).padStart(2, "0")}:{String(proximoApt.minutoInicio).padStart(2, "0")}
+                  </span>
                 </div>
-              ))}
+                <p className="text-sm font-body opacity-90">{proximoApt.procedimento}</p>
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Contact */}
+          {cliente.allergies.length > 0 && (
+            <div className="bg-surface-lowest rounded-3xl p-6 shadow-ambient">
+              <div className="flex items-center gap-2 mb-4">
+                <AlertTriangle className="w-4 h-4 text-error" />
+                <h3 className="font-display text-base font-bold text-on-surface">
+                  Alergias Documentadas
+                </h3>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {cliente.allergies.map((allergy) => (
+                  <span
+                    key={allergy}
+                    className="px-3 py-1.5 rounded-full text-xs font-semibold bg-error-container text-on-error-container font-body"
+                  >
+                    {allergy}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {cliente.preferences.length > 0 && (
+            <div className="bg-surface-lowest rounded-3xl p-6 shadow-ambient">
+              <div className="flex items-center gap-2 mb-4">
+                <Heart className="w-4 h-4 text-primary" />
+                <h3 className="font-display text-base font-bold text-on-surface">Preferências</h3>
+              </div>
+              <div className="space-y-2">
+                {cliente.preferences.map((pref) => (
+                  <div
+                    key={pref}
+                    className="px-4 py-2.5 rounded-2xl bg-surface-low text-sm text-on-surface-variant font-body"
+                  >
+                    {pref}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="bg-surface-lowest rounded-3xl p-6 shadow-ambient">
             <h3 className="font-display text-base font-bold text-on-surface mb-4">
               Informações de Contato
             </h3>
             <div className="space-y-3">
-              <div className="flex items-center gap-3 text-sm text-on-surface-variant font-body">
-                <Phone className="w-4 h-4" />
-                {clientData.phone}
-              </div>
-              <div className="flex items-center gap-3 text-sm text-on-surface-variant font-body">
-                <Mail className="w-4 h-4" />
-                {clientData.email}
-              </div>
-              <div className="flex items-center gap-3 text-sm text-on-surface-variant font-body">
-                <MapPin className="w-4 h-4" />
-                {clientData.address}
-              </div>
-              <div className="flex items-center gap-3 text-sm text-on-surface-variant font-body">
-                <Calendar className="w-4 h-4" />
-                {clientData.birthDate}
-              </div>
+              {cliente.phone && (
+                <div className="flex items-center gap-3 text-sm text-on-surface-variant font-body">
+                  <Phone className="w-4 h-4" />{cliente.phone}
+                </div>
+              )}
+              {cliente.email && (
+                <div className="flex items-center gap-3 text-sm text-on-surface-variant font-body">
+                  <Mail className="w-4 h-4" />{cliente.email}
+                </div>
+              )}
+              {cliente.address && (
+                <div className="flex items-center gap-3 text-sm text-on-surface-variant font-body">
+                  <MapPin className="w-4 h-4" />{cliente.address}
+                </div>
+              )}
+              {cliente.birthDate && (
+                <div className="flex items-center gap-3 text-sm text-on-surface-variant font-body">
+                  <Calendar className="w-4 h-4" />{formatBirthDate(cliente.birthDate)}
+                </div>
+              )}
             </div>
           </div>
         </div>

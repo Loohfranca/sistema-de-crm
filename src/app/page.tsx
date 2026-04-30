@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import {
   Users, Calendar, Clock, CheckCircle2,
   ChevronRight, MessageCircle, Phone, XCircle,
+  Play, TrendingUp, Sparkles,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -11,8 +12,9 @@ import {
   isoParaBR,
   type Agendamento,
 } from "@/lib/store";
-import { statusConfig } from "@/lib/agenda-config";
+import { statusConfig, endTime } from "@/lib/agenda-config";
 import { AlertasEstoque } from "@/components/dashboard/alertas-estoque";
+import { LembretesProximos } from "@/components/dashboard/lembretes-proximos";
 
 // ─── Birthday helpers ─────────────────────────────────────────────────────────
 function daysFromNow(n: number) {
@@ -29,7 +31,7 @@ const birthdayClients = [
 
 function waMsg(name: string) {
   const first = name.split(" ")[0];
-  return encodeURIComponent(`Olá, ${first}! 🎂 A equipe da Gabelia deseja um feliz aniversário! Que hoje seja especial ✨💖`);
+  return encodeURIComponent(`Olá, ${first}! 🎂 A equipe do Studio Estética deseja um feliz aniversário! Que hoje seja especial ✨💖`);
 }
 
 // ─── Heatmap helpers ─────────────────────────────────────────────────────────
@@ -180,23 +182,55 @@ export default function Dashboard() {
 
   const agendaAtual = vistaAgenda === "hoje" ? agendaHoje : agendaSemana;
 
-  // Próximos agendamentos futuros (para estado vazio)
-  const proximos = lista
-    .filter((a) => a.data > hojeISO && a.status === "agendado")
-    .sort((a, b) => a.data.localeCompare(b.data) || a.horaInicio - b.horaInicio || a.minutoInicio - b.minutoInicio)
-    .slice(0, 3);
-
   // Histórico: realizados + cancelados (most recent first)
   const recentes = lista
     .filter((a) => a.status === "realizado" || a.status === "cancelado")
     .sort((a, b) => b.data.localeCompare(a.data) || b.horaInicio - a.horaInicio)
     .slice(0, 5);
 
+  // ── Métricas do dia ──────────────────────────────────────────────────────────
+  const todosHoje = lista
+    .filter((a) => a.data === hojeISO)
+    .sort((a, b) => a.horaInicio - b.horaInicio || a.minutoInicio - b.minutoInicio);
+
+  const faturamentoHoje = todosHoje
+    .filter((a) => a.status === "realizado")
+    .reduce((acc, a) => acc + (a.valor || 0), 0);
+
+  const realizadosHoje = todosHoje.filter((a) => a.status === "realizado").length;
+
+  // Horários livres hoje: total de slots de 1h (8–18h = 10 slots) − ocupados
+  const slotsOcupadosHoje = new Set(
+    todosHoje.filter((a) => a.status !== "cancelado").map((a) => a.horaInicio)
+  ).size;
+  const horariosLivresHoje = Math.max(0, 10 - slotsOcupadosHoje);
+
+  // Próximo atendimento: primeiro "agendado" de hoje (ou agora em diante)
+  const agora = new Date();
+  const minutosAgora = agora.getHours() * 60 + agora.getMinutes();
+  const proximoAtendimento = todosHoje
+    .filter((a) => a.status === "agendado")
+    .find((a) => a.horaInicio * 60 + a.minutoInicio >= minutosAgora) ??
+    todosHoje.find((a) => a.status === "agendado");
+
+  // Timeline: hoje mostra todos status; semana mostra apenas pendentes da semana
+  const timelineSource = vistaAgenda === "hoje" ? todosHoje : agendaSemana;
+  const timelineItems = timelineSource.map((a) => {
+    const inicio = a.horaInicio * 60 + a.minutoInicio;
+    const fim = inicio + a.duracao;
+    const isCurrent =
+      a.data === hojeISO &&
+      a.status === "agendado" &&
+      minutosAgora >= inicio &&
+      minutosAgora < fim;
+    return { ...a, isCurrent };
+  });
+
   return (
     <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 min-h-0">
 
       {/* Left column */}
-      <div className="flex-1 min-w-0 space-y-4 lg:space-y-6">
+      <div className="flex-1 min-w-0 space-y-5 lg:space-y-7">
 
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
@@ -217,144 +251,360 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Stats */}
+        {/* ── Stats premium ── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
           {stats.map((s) => (
-            <Link key={s.label} href={s.href} className="bg-surface-lowest rounded-2xl p-5 shadow-ambient hover:shadow-lg hover:scale-[1.02] transition-all group">
-              <div className="flex items-start justify-between mb-3">
-                <div className={`w-10 h-10 ${s.color} rounded-xl flex items-center justify-center`}>
+            <Link
+              key={s.label}
+              href={s.href}
+              className="relative bg-surface-lowest rounded-2xl p-5 shadow-ambient ring-1 ring-outline-variant/15 hover:ring-primary/30 hover:shadow-lg hover:-translate-y-0.5 transition-all group overflow-hidden"
+            >
+              <div className="absolute -right-6 -top-6 w-24 h-24 rounded-full bg-primary/5 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="relative flex items-start justify-between mb-4">
+                <div className={`w-11 h-11 ${s.color} rounded-2xl flex items-center justify-center shadow-sm ring-1 ring-on-surface/5`}>
                   <s.icon className={`w-5 h-5 ${s.iconColor}`} />
                 </div>
-                <ChevronRight className="w-4 h-4 text-outline-variant opacity-0 group-hover:opacity-100 transition-opacity" />
+                <ChevronRight className="w-4 h-4 text-outline-variant opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
               </div>
-              <p className="font-display text-lg font-bold text-on-surface leading-tight">{s.value}</p>
-              <p className="text-xs text-on-surface-variant font-body mt-0.5">{s.label}</p>
+              <p className="font-display text-2xl font-bold text-on-surface leading-none tabular-nums">{s.value}</p>
+              <p className="text-[11px] text-on-surface-variant font-body mt-1.5 uppercase tracking-wider">{s.label}</p>
             </Link>
           ))}
         </div>
 
-        {/* ── Agenda pendente — seção principal ── */}
-        <div className="bg-surface-lowest rounded-2xl shadow-ambient overflow-hidden ring-1 ring-primary/10">
-          <div className="flex items-center justify-between px-5 py-3.5 border-b border-outline-variant/20 bg-primary-fixed/30">
-            <div className="flex items-center gap-3">
-              <h2 className="font-display text-sm font-bold text-on-surface">
-                {vistaAgenda === "hoje" ? "Agenda de hoje" : "Agenda da semana"}
-              </h2>
-              <span className="text-[11px] text-on-surface-variant font-body">
-                {vistaAgenda === "hoje"
-                  ? `${hojeFormatado} · ${agendaAtual.length} pendente${agendaAtual.length !== 1 ? "s" : ""}`
-                  : `${isoParaBR(segISO)} – ${isoParaBR(domISO)} · ${agendaAtual.length}`
-                }
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="flex rounded-full bg-surface-lowest p-0.5">
-                <button
-                  onClick={() => setVistaAgenda("hoje")}
-                  className={`px-2.5 py-1 rounded-full text-[10px] font-semibold font-body transition-all ${
-                    vistaAgenda === "hoje"
-                      ? "gradient-primary text-on-primary"
-                      : "text-on-surface-variant hover:text-on-surface"
-                  }`}
-                >
-                  Hoje
-                </button>
-                <button
-                  onClick={() => setVistaAgenda("semana")}
-                  className={`px-2.5 py-1 rounded-full text-[10px] font-semibold font-body transition-all ${
-                    vistaAgenda === "semana"
-                      ? "gradient-primary text-on-primary"
-                      : "text-on-surface-variant hover:text-on-surface"
-                  }`}
-                >
-                  Semana
-                </button>
+        {/* ── Grid: Próximo Atendimento + Faturamento (esq) | Agenda timeline (dir) ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-5">
+
+          {/* ── COLUNA ESQUERDA — menor ── */}
+          <div className="lg:col-span-5 space-y-4 lg:space-y-5">
+
+            {/* Próximo Atendimento */}
+            <div className="relative bg-gradient-to-br from-primary-container/60 via-surface-lowest to-secondary-container/30 rounded-3xl p-5 shadow-ambient ring-1 ring-primary/15 overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
+              <div className="relative">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                    <p className="text-[10px] font-semibold text-primary font-body uppercase tracking-widest">Próximo Atendimento</p>
+                  </div>
+                  <span className="text-[10px] text-on-surface-variant font-body">{hojeFormatado}</span>
+                </div>
+
+                {proximoAtendimento ? (
+                  <>
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="relative shrink-0">
+                        <div className="w-14 h-14 rounded-2xl gradient-primary flex items-center justify-center text-on-primary font-display font-bold text-lg shadow-md ring-2 ring-surface-lowest">
+                          {proximoAtendimento.avatar}
+                        </div>
+                        <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-surface-lowest flex items-center justify-center shadow-sm">
+                          <Sparkles className="w-2.5 h-2.5 text-primary" />
+                        </div>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-display text-base font-bold text-on-surface truncate">{proximoAtendimento.cliente}</p>
+                        <p className="text-xs text-on-surface-variant font-body truncate">{proximoAtendimento.procedimento}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 mb-4 text-xs text-on-surface-variant font-body">
+                      <Clock className="w-3.5 h-3.5 text-primary" />
+                      <span className="font-semibold text-on-surface tabular-nums">
+                        {String(proximoAtendimento.horaInicio).padStart(2,"0")}:{String(proximoAtendimento.minutoInicio).padStart(2,"0")}
+                      </span>
+                      <span className="text-outline-variant">→</span>
+                      <span className="tabular-nums">{endTime(proximoAtendimento)}</span>
+                      <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-surface-lowest/80 text-on-surface-variant">
+                        {proximoAtendimento.duracao} min
+                      </span>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Link
+                        href="/agenda"
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl gradient-primary text-on-primary text-xs font-bold font-body hover:opacity-90 transition-opacity shadow-md"
+                      >
+                        <Play className="w-3.5 h-3.5 fill-current" />Iniciar
+                      </Link>
+                      {proximoAtendimento.telefone && (
+                        <a
+                          href={`https://wa.me/${proximoAtendimento.telefone.replace(/\D/g, "")}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="WhatsApp"
+                          className="w-10 h-10 rounded-2xl bg-surface-lowest flex items-center justify-center text-on-surface-variant hover:bg-[#25D366]/15 hover:text-[#25D366] transition-all ring-1 ring-outline-variant/20"
+                        >
+                          <MessageCircle className="w-4 h-4" />
+                        </a>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <div className="py-6 text-center">
+                    <div className="w-12 h-12 mx-auto mb-3 rounded-2xl bg-surface-lowest flex items-center justify-center">
+                      <CheckCircle2 className="w-5 h-5 text-on-surface-variant" />
+                    </div>
+                    <p className="text-xs font-semibold text-on-surface font-body">Sem próximos hoje</p>
+                    <p className="text-[11px] text-on-surface-variant font-body mt-1">Aproveite a folga ou agende</p>
+                  </div>
+                )}
               </div>
-              <Link href="/agenda" className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-surface-lowest text-[11px] text-primary font-semibold font-body hover:bg-surface-high transition-colors">
-                Ver agenda <ChevronRight className="w-3 h-3" />
-              </Link>
+            </div>
+
+            {/* Faturamento do dia */}
+            <div className="bg-surface-lowest rounded-3xl p-5 shadow-ambient ring-1 ring-outline-variant/15">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-secondary-container/70 flex items-center justify-center">
+                    <TrendingUp className="w-4 h-4 text-on-secondary-container" />
+                  </div>
+                  <p className="text-[10px] font-semibold text-on-surface-variant font-body uppercase tracking-widest">Faturamento do dia</p>
+                </div>
+                <Link href="/financeiro" className="text-[10px] text-primary font-semibold font-body hover:opacity-80 transition-opacity">
+                  Ver
+                </Link>
+              </div>
+              <p className="font-display text-2xl font-bold text-on-surface tabular-nums">
+                {faturamentoHoje.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+              </p>
+              <div className="flex items-center justify-between mt-3 pt-3 border-t border-outline-variant/15">
+                <div>
+                  <p className="text-[10px] text-on-surface-variant font-body uppercase tracking-wide">Realizados</p>
+                  <p className="text-sm font-bold font-display text-on-surface tabular-nums">{realizadosHoje}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] text-on-surface-variant font-body uppercase tracking-wide">Horários livres</p>
+                  <p className="text-sm font-bold font-display text-on-surface tabular-nums">{horariosLivresHoje}</p>
+                </div>
+              </div>
             </div>
           </div>
 
-          {agendaAtual.length === 0 ? (
-            <div>
-              <div className="px-5 py-3 flex items-center justify-between border-b border-outline-variant/10">
-                <p className="text-xs text-on-surface-variant font-body">Agenda livre {vistaAgenda === "hoje" ? "hoje" : "esta semana"}</p>
-                <Link href="/atendimentos/novo" className="inline-flex items-center gap-1 text-[11px] text-primary font-semibold font-body hover:opacity-80 transition-opacity">
-                  Agendar <ChevronRight className="w-3 h-3" />
-                </Link>
-              </div>
-              {proximos.length > 0 && (
+          {/* ── COLUNA DIREITA — maior — Agenda timeline ── */}
+          <div className="lg:col-span-7">
+            <div className="bg-surface-lowest rounded-3xl shadow-ambient ring-1 ring-outline-variant/15 overflow-hidden h-full flex flex-col">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant/15">
                 <div>
-                  <p className="px-5 pt-2.5 pb-1 text-[10px] font-semibold text-on-surface-variant font-body uppercase tracking-widest">Próximos</p>
-                  <div className="divide-y divide-outline-variant/10">
-                    {proximos.map((apt) => (
-                      <Link key={apt.id} href="/agenda" className="flex items-center gap-3 px-5 py-2 hover:bg-surface-low transition-colors group">
-                        <span className="text-[10px] text-on-surface-variant font-body tabular-nums shrink-0 w-10">
-                          {isoParaBR(apt.data).slice(0, 5)}
-                        </span>
-                        <span className="text-xs font-semibold text-primary font-body tabular-nums shrink-0 w-10">
-                          {String(apt.horaInicio).padStart(2,"0")}:{String(apt.minutoInicio).padStart(2,"0")}
-                        </span>
-                        <p className="flex-1 text-xs font-semibold text-on-surface font-body truncate group-hover:text-primary transition-colors">{apt.cliente}</p>
-                        <p className="text-[11px] text-on-surface-variant font-body truncate max-w-[140px] hidden lg:block">{apt.procedimento}</p>
-                      </Link>
-                    ))}
+                  <h2 className="font-display text-base font-bold text-on-surface">
+                    {vistaAgenda === "hoje" ? "Agenda de hoje" : "Agenda da semana"}
+                  </h2>
+                  <p className="text-[11px] text-on-surface-variant font-body mt-0.5">
+                    {vistaAgenda === "hoje"
+                      ? `${hojeFormatado} · ${timelineItems.length} atendimento${timelineItems.length !== 1 ? "s" : ""}`
+                      : `${isoParaBR(segISO)} – ${isoParaBR(domISO)} · ${agendaAtual.length}`
+                    }
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex rounded-full bg-surface-high p-0.5">
+                    <button
+                      onClick={() => setVistaAgenda("hoje")}
+                      className={`px-3 py-1 rounded-full text-[10px] font-semibold font-body transition-all ${
+                        vistaAgenda === "hoje"
+                          ? "gradient-primary text-on-primary shadow-sm"
+                          : "text-on-surface-variant hover:text-on-surface"
+                      }`}
+                    >
+                      Hoje
+                    </button>
+                    <button
+                      onClick={() => setVistaAgenda("semana")}
+                      className={`px-3 py-1 rounded-full text-[10px] font-semibold font-body transition-all ${
+                        vistaAgenda === "semana"
+                          ? "gradient-primary text-on-primary shadow-sm"
+                          : "text-on-surface-variant hover:text-on-surface"
+                      }`}
+                    >
+                      Semana
+                    </button>
                   </div>
                 </div>
-              )}
-            </div>
-          ) : (
-            <div className="divide-y divide-outline-variant/10">
-              {agendaAtual.slice(0, 3).map((apt) => (
-                <Link key={apt.id} href="/agenda" className="flex items-center gap-3 px-5 py-2.5 hover:bg-surface-low transition-colors group">
-                  {vistaAgenda === "semana" && (
-                    <span className="text-[10px] text-on-surface-variant font-body tabular-nums shrink-0 w-10">
-                      {isoParaBR(apt.data).slice(0, 5)}
-                    </span>
-                  )}
-                  <span className="text-xs font-semibold text-primary font-body tabular-nums shrink-0 w-10">
-                    {String(apt.horaInicio).padStart(2,"0")}:{String(apt.minutoInicio).padStart(2,"0")}
-                  </span>
-                  <p className="flex-1 text-xs font-semibold text-on-surface font-body truncate group-hover:text-primary transition-colors">{apt.cliente}</p>
-                  <p className="text-[11px] text-on-surface-variant font-body truncate max-w-[160px] hidden lg:block">{apt.procedimento}</p>
-                  <ChevronRight className="w-3.5 h-3.5 text-outline-variant opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+              </div>
+
+              <div className="flex-1 px-5 py-5">
+                {timelineItems.length === 0 ? (
+                  <div className="py-10 text-center">
+                    <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-surface-high flex items-center justify-center">
+                      <Calendar className="w-6 h-6 text-on-surface-variant" />
+                    </div>
+                    <p className="text-sm font-semibold text-on-surface font-body">Agenda livre</p>
+                    <p className="text-[11px] text-on-surface-variant font-body mt-1 mb-4">
+                      Nenhum atendimento para {vistaAgenda === "hoje" ? "hoje" : "esta semana"}
+                    </p>
+                    <Link
+                      href="/atendimentos/novo"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full gradient-primary text-on-primary text-xs font-semibold font-body hover:opacity-90 transition-opacity"
+                    >
+                      <Calendar className="w-3.5 h-3.5" />Agendar
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    {/* linha vertical da timeline */}
+                    <div className="absolute left-[58px] top-2 bottom-2 w-px bg-gradient-to-b from-primary/30 via-outline-variant/40 to-transparent" />
+
+                    <div className="space-y-3">
+                      {timelineItems.map((apt) => {
+                        const sc = statusConfig[apt.status];
+                        const StatusIcon = sc.icon;
+                        const isCurrent = apt.isCurrent;
+                        return (
+                          <Link
+                            key={apt.id}
+                            href="/agenda"
+                            className="group relative flex items-stretch gap-4"
+                          >
+                            {/* horário */}
+                            <div className="w-12 shrink-0 pt-2 text-right">
+                              <p className={`text-xs font-bold font-body tabular-nums ${isCurrent ? "text-primary" : "text-on-surface"}`}>
+                                {String(apt.horaInicio).padStart(2,"0")}:{String(apt.minutoInicio).padStart(2,"0")}
+                              </p>
+                              <p className="text-[10px] text-on-surface-variant font-body tabular-nums">{endTime(apt)}</p>
+                            </div>
+
+                            {/* dot na timeline */}
+                            <div className="relative shrink-0 flex justify-center w-3 pt-3">
+                              <div className={`relative w-3 h-3 rounded-full ring-4 ring-surface-lowest z-10 ${
+                                isCurrent
+                                  ? "bg-primary shadow-[0_0_0_4px_var(--md-sys-color-primary-container)]"
+                                  : apt.status === "realizado"
+                                    ? "bg-secondary"
+                                    : apt.status === "cancelado"
+                                      ? "bg-error"
+                                      : "bg-primary-container ring-primary/20"
+                              }`}>
+                                {isCurrent && (
+                                  <span className="absolute inset-0 rounded-full bg-primary animate-ping opacity-60" />
+                                )}
+                              </div>
+                            </div>
+
+                            {/* card */}
+                            <div className={`flex-1 min-w-0 rounded-2xl p-3.5 transition-all ${
+                              isCurrent
+                                ? "bg-primary-container/50 ring-2 ring-primary/40 shadow-md"
+                                : "bg-surface-low/60 ring-1 ring-outline-variant/15 hover:ring-primary/25 hover:bg-surface-low"
+                            }`}>
+                              <div className="flex items-start gap-3">
+                                <div className={`w-9 h-9 shrink-0 rounded-xl flex items-center justify-center font-display font-bold text-[11px] ${
+                                  apt.cor === "rose" ? "bg-rose-100 text-rose-900 dark:bg-rose-950/40 dark:text-rose-200" :
+                                  apt.cor === "gold" ? "bg-amber-100 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200" :
+                                  "bg-sky-100 text-sky-900 dark:bg-sky-950/40 dark:text-sky-200"
+                                }`}>
+                                  {apt.avatar}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center justify-between gap-2 mb-0.5">
+                                    <p className="text-xs font-bold text-on-surface font-body truncate group-hover:text-primary transition-colors">
+                                      {apt.cliente}
+                                    </p>
+                                    <span className={`shrink-0 inline-flex items-center gap-1 text-[9px] px-2 py-0.5 rounded-full font-semibold font-body ${
+                                      isCurrent ? "bg-primary text-on-primary" : sc.cls
+                                    }`}>
+                                      <StatusIcon className="w-2.5 h-2.5" />
+                                      {isCurrent ? "Em andamento" : sc.label}
+                                    </span>
+                                  </div>
+                                  <p className="text-[11px] text-on-surface-variant font-body truncate">{apt.procedimento}</p>
+                                </div>
+                              </div>
+                            </div>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="px-5 py-3 border-t border-outline-variant/15 bg-surface-low/30">
+                <Link href="/agenda" className="flex items-center justify-center gap-1 text-[11px] text-primary font-semibold font-body hover:opacity-80 transition-opacity">
+                  Ver agenda completa <ChevronRight className="w-3 h-3" />
                 </Link>
-              ))}
-              {agendaAtual.length > 3 && (
-                <Link href="/agenda" className="flex items-center justify-center px-5 py-2 text-[11px] text-primary font-semibold font-body hover:bg-surface-low transition-colors">
-                  +{agendaAtual.length - 3} mais <ChevronRight className="w-3 h-3 ml-0.5" />
-                </Link>
-              )}
+              </div>
             </div>
-          )}
+          </div>
         </div>
 
-        {/* ── Histórico recente — seção secundária ── */}
-        <div className="bg-surface-lowest/70 rounded-2xl overflow-hidden">
-          <div className="flex items-center justify-between px-6 py-3.5 border-b border-outline-variant/10">
-            <h2 className="font-display text-sm font-bold text-on-surface-variant">Histórico recente</h2>
-            <Link href="/atendimentos" className="text-[11px] text-primary font-semibold font-body hover:opacity-80 transition-opacity flex items-center gap-1">
+        {/* ── Histórico recente — premium ── */}
+        <div className="bg-surface-lowest rounded-3xl shadow-ambient ring-1 ring-outline-variant/15 overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant/15">
+            <div>
+              <h2 className="font-display text-base font-bold text-on-surface">Histórico recente</h2>
+              <p className="text-[11px] text-on-surface-variant font-body mt-0.5">Últimos atendimentos</p>
+            </div>
+            <Link href="/atendimentos" className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-surface-high text-[11px] text-primary font-semibold font-body hover:bg-primary-container/50 transition-colors">
               Ver todos <ChevronRight className="w-3 h-3" />
             </Link>
           </div>
-          <div className="divide-y divide-outline-variant/8">
+
+          {/* cabeçalho — só desktop */}
+          <div className="hidden md:grid grid-cols-12 px-5 py-2.5 bg-surface-low/40 border-b border-outline-variant/10">
+            <p className="col-span-5 text-[10px] font-semibold text-on-surface-variant font-body uppercase tracking-wider">Cliente</p>
+            <p className="col-span-4 text-[10px] font-semibold text-on-surface-variant font-body uppercase tracking-wider">Serviço</p>
+            <p className="col-span-2 text-[10px] font-semibold text-on-surface-variant font-body uppercase tracking-wider">Hora</p>
+            <p className="col-span-1 text-[10px] font-semibold text-on-surface-variant font-body uppercase tracking-wider text-right">Status</p>
+          </div>
+
+          <div className="divide-y divide-outline-variant/10">
             {recentes.length === 0 ? (
-              <p className="px-6 py-5 text-center text-on-surface-variant text-xs font-body">
-                Nenhum atendimento registrado.
-              </p>
+              <div className="px-5 py-10 text-center">
+                <div className="w-12 h-12 mx-auto mb-3 rounded-2xl bg-surface-high flex items-center justify-center">
+                  <Clock className="w-5 h-5 text-on-surface-variant" />
+                </div>
+                <p className="text-xs text-on-surface-variant font-body">Nenhum atendimento registrado</p>
+              </div>
             ) : (
               recentes.slice(0, 5).map((apt) => {
                 const sc = statusConfig[apt.status];
                 const StatusIcon = sc.icon;
                 return (
-                  <Link key={apt.id} href="/agenda" className="flex items-center gap-3 px-6 py-2.5 hover:bg-surface-low transition-colors group">
-                    <span className="text-[11px] text-on-surface-variant font-body tabular-nums shrink-0 w-16">{isoParaBR(apt.data)}</span>
-                    <p className="flex-1 text-xs font-medium text-on-surface font-body truncate group-hover:text-primary transition-colors">{apt.cliente}</p>
-                    <p className="text-[11px] text-on-surface-variant font-body truncate max-w-[140px] hidden lg:block">{apt.procedimento}</p>
-                    <span className={`inline-flex items-center gap-1 text-[9px] px-2 py-0.5 rounded-full font-semibold font-body shrink-0 ${sc.cls}`}>
-                      <StatusIcon className="w-2.5 h-2.5" />{sc.label}
-                    </span>
+                  <Link
+                    key={apt.id}
+                    href="/agenda"
+                    className="grid grid-cols-12 items-center gap-3 px-5 py-3.5 hover:bg-surface-low/50 transition-colors group"
+                  >
+                    {/* Cliente + avatar */}
+                    <div className="col-span-12 md:col-span-5 flex items-center gap-3 min-w-0">
+                      <div className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center font-display font-bold text-[11px] ${
+                        apt.cor === "rose" ? "bg-rose-100 text-rose-900 dark:bg-rose-950/40 dark:text-rose-200" :
+                        apt.cor === "gold" ? "bg-amber-100 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200" :
+                        "bg-sky-100 text-sky-900 dark:bg-sky-950/40 dark:text-sky-200"
+                      }`}>
+                        {apt.avatar}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-bold text-on-surface font-body truncate group-hover:text-primary transition-colors">
+                          {apt.cliente}
+                        </p>
+                        <p className="text-[10px] text-on-surface-variant font-body truncate md:hidden">
+                          {apt.procedimento}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Serviço — desktop */}
+                    <p className="hidden md:block md:col-span-4 text-[11px] text-on-surface-variant font-body truncate">
+                      {apt.procedimento}
+                    </p>
+
+                    {/* Hora/Data */}
+                    <div className="hidden md:block md:col-span-2">
+                      <p className="text-[11px] font-semibold text-on-surface font-body tabular-nums">
+                        {isoParaBR(apt.data).slice(0, 5)}
+                      </p>
+                      <p className="text-[10px] text-on-surface-variant font-body tabular-nums">
+                        {String(apt.horaInicio).padStart(2,"0")}:{String(apt.minutoInicio).padStart(2,"0")}
+                      </p>
+                    </div>
+
+                    {/* Status */}
+                    <div className="col-span-12 md:col-span-1 flex md:justify-end">
+                      <span className={`inline-flex items-center gap-1 text-[9px] px-2 py-1 rounded-full font-semibold font-body ${sc.cls}`}>
+                        <StatusIcon className="w-2.5 h-2.5" />
+                        <span className="md:hidden lg:inline">{sc.label}</span>
+                      </span>
+                    </div>
                   </Link>
                 );
               })
@@ -364,7 +614,10 @@ export default function Dashboard() {
       </div>
 
       {/* Right column — vira coluna abaixo do conteúdo principal no mobile */}
-      <div className="w-full lg:w-72 lg:shrink-0 space-y-4 lg:overflow-y-auto" style={{ maxHeight: "calc(100vh - 6rem)" }}>
+      <div className="w-full lg:w-72 lg:shrink-0 space-y-4">
+
+        {/* Lembretes WhatsApp — atendimentos nas próximas 2h */}
+        <LembretesProximos />
 
         {/* Alertas de estoque (só aparece se houver) */}
         <AlertasEstoque />

@@ -22,7 +22,6 @@ import type { Cliente } from "@/lib/clientes";
 import { PrismaMark } from "./topbar/prisma-mark";
 import { NotificationsBell } from "./topbar/notifications-bell";
 import { ProfileMenu } from "./topbar/profile-menu";
-import { ThemeToggle } from "./theme-toggle";
 
 interface Atalho {
   label: string;
@@ -241,22 +240,9 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
           </AnimatePresence>
         </div>
 
-        {/* Direita — tema + notificações + CTA + perfil */}
+        {/* Direita — apenas notificações + perfil */}
         <div className="flex items-center gap-1 shrink-0">
-          <div className="hidden sm:block">
-            <ThemeToggle />
-          </div>
           <NotificationsBell />
-
-          <Link
-            href="/atendimentos/novo"
-            aria-label="Novo atendimento"
-            className="ml-1 flex items-center justify-center gap-2 w-10 h-10 md:w-auto md:h-auto md:px-4 md:py-2.5 rounded-full gradient-primary text-on-primary text-sm font-semibold font-body hover:opacity-90 transition-opacity"
-          >
-            <CalendarPlus className="w-4 h-4" />
-            <span className="hidden lg:inline">Novo Atendimento</span>
-          </Link>
-
           <ProfileMenu />
         </div>
       </div>

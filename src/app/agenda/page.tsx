@@ -4,8 +4,9 @@ import { useState, useCallback, useEffect, useMemo } from "react";
 import { AnimatePresence } from "motion/react";
 import { ChevronLeft, ChevronRight, Plus, LayoutGrid, CalendarDays, Calendar } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
-  getAgendamentos, atualizarStatus,
+  getAgendamentos, atualizarStatus, atualizarAgendamento,
   type Agendamento, type StatusApt,
 } from "@/lib/store";
 import {
@@ -18,11 +19,14 @@ import { EventCard } from "@/components/agenda/event-card";
 import { SidePanel } from "@/components/agenda/side-panel";
 
 export default function AgendaPage() {
+  const router = useRouter();
   const today = new Date();
   const [selectedDate, setSelectedDate] = useState(today);
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [panelApt, setPanelApt] = useState<Agendamento | null>(null);
   const [view, setView] = useState<"week" | "day" | "month">("week");
+  const [dragOverDay, setDragOverDay] = useState<string | null>(null);
+  const [hoverDay, setHoverDay] = useState<string | null>(null);
 
   const carregar = useCallback(() => setAgendamentos(getAgendamentos()), []);
   useEffect(() => {
@@ -94,6 +98,46 @@ export default function AgendaPage() {
     const nova = atualizarStatus(id, status, retorno);
     setAgendamentos(nova);
     setPanelApt(prev => prev?.id === id ? nova.find(a => a.id === id) ?? null : prev);
+  }
+
+  // ── Drag & drop: calcula horário a partir do Y do drop e atualiza ───────────
+  function timeFromY(y: number): { hora: number; minuto: number } {
+    const slotsPorHora = 4; // snap 15min
+    const pixelsPorSlot = CELL_H / slotsPorHora;
+    const slot = Math.max(0, Math.min(HOURS.length * slotsPorHora - 1, Math.floor(y / pixelsPorSlot)));
+    const hora = 8 + Math.floor(slot / slotsPorHora);
+    const minuto = (slot % slotsPorHora) * 15;
+    return { hora, minuto };
+  }
+
+  function handleDragOverColuna(e: React.DragEvent<HTMLDivElement>, dataISO: string) {
+    if (e.dataTransfer.types.includes("application/x-agendamento-id")) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      if (dragOverDay !== dataISO) setDragOverDay(dataISO);
+    }
+  }
+
+  function handleDropColuna(e: React.DragEvent<HTMLDivElement>, dataISO: string) {
+    e.preventDefault();
+    const id = Number(e.dataTransfer.getData("application/x-agendamento-id"));
+    if (!id) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const y = e.clientY - rect.top;
+    const { hora, minuto } = timeFromY(y);
+    const nova = atualizarAgendamento(id, { data: dataISO, horaInicio: hora, minutoInicio: minuto });
+    setAgendamentos(nova);
+    setDragOverDay(null);
+  }
+
+  // ── Click em slot vazio → agendar com data+horario pré-preenchidos ──────────
+  function handleClickColuna(e: React.MouseEvent<HTMLDivElement>, dataISO: string) {
+    // Se clicou num EventCard (button interno), o stopPropagation evita chegar aqui
+    const rect = e.currentTarget.getBoundingClientRect();
+    const y = e.clientY - rect.top;
+    const { hora, minuto } = timeFromY(y);
+    const horario = `${String(hora).padStart(2, "0")}:${String(minuto).padStart(2, "0")}`;
+    router.push(`/atendimentos/novo?data=${dataISO}&horario=${horario}`);
   }
 
   return (
@@ -184,20 +228,63 @@ export default function AgendaPage() {
                 const df = fmtISO(d);
                 const isToday = df === fmtISO(today);
                 const isSel = df === fmtISO(selectedDate);
+                const isDragOver = dragOverDay === df;
+                const isHover = hoverDay === df;
                 const dayApts = agendamentos.filter(a => a.data === df);
                 return (
-                  <button
+                  <div
                     key={day}
+                    draggable={false}
+                    onDragOver={(e) => {
+                      if (e.dataTransfer.types.includes("application/x-agendamento-id")) {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = "move";
+                        if (dragOverDay !== df) setDragOverDay(df);
+                      }
+                    }}
+                    onDragLeave={() => setDragOverDay(null)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      const id = Number(e.dataTransfer.getData("application/x-agendamento-id"));
+                      if (!id) return;
+                      // Mantém o horário existente, só troca o dia
+                      const existente = agendamentos.find(a => a.id === id);
+                      const patch: Partial<Agendamento> = existente
+                        ? { data: df }
+                        : { data: df, horaInicio: 9, minutoInicio: 0 };
+                      const nova = atualizarAgendamento(id, patch);
+                      setAgendamentos(nova);
+                      setDragOverDay(null);
+                    }}
+                    onMouseEnter={() => setHoverDay(df)}
+                    onMouseLeave={() => setHoverDay(null)}
                     onClick={() => { setSelectedDate(d); setView("day"); }}
-                    className={`border-t border-r border-outline-variant/10 p-1.5 text-left flex flex-col hover:bg-surface-low transition-colors ${isToday ? "bg-primary/5" : ""}`}
+                    className={`relative border-t border-r border-outline-variant/10 p-1.5 text-left flex flex-col cursor-pointer transition-colors ${
+                      isDragOver ? "bg-primary/15" : isToday ? "bg-primary/5 hover:bg-primary/10" : "hover:bg-surface-low"
+                    }`}
                   >
-                    <span className={`text-xs font-body self-end w-6 h-6 flex items-center justify-center rounded-full ${
-                      isSel ? "gradient-primary text-on-primary font-bold"
-                        : isToday ? "ring-2 ring-primary text-primary font-bold"
-                          : "text-on-surface-variant"
-                    }`}>
-                      {day}
-                    </span>
+                    <div className="flex items-center justify-between">
+                      {isHover ? (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            router.push(`/atendimentos/novo?data=${df}`);
+                          }}
+                          title="Agendar neste dia"
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full gradient-primary text-on-primary text-[10px] font-semibold font-body shadow-sm hover:opacity-90 transition-opacity"
+                        >
+                          <Plus className="w-2.5 h-2.5" />Agendar
+                        </button>
+                      ) : <span />}
+                      <span className={`text-xs font-body w-6 h-6 flex items-center justify-center rounded-full ${
+                        isSel ? "gradient-primary text-on-primary font-bold"
+                          : isToday ? "ring-2 ring-primary text-primary font-bold"
+                            : "text-on-surface-variant"
+                      }`}>
+                        {day}
+                      </span>
+                    </div>
                     {dayApts.length > 0 && (
                       <div className="mt-1 space-y-0.5 overflow-hidden flex-1 min-h-0">
                         {dayApts.slice(0, 3).map(apt => {
@@ -205,7 +292,12 @@ export default function AgendaPage() {
                           return (
                             <div
                               key={apt.id}
-                              className={`${c.bg} rounded px-1.5 py-0.5 truncate`}
+                              draggable
+                              onDragStart={(e) => {
+                                e.dataTransfer.setData("application/x-agendamento-id", String(apt.id));
+                                e.dataTransfer.effectAllowed = "move";
+                              }}
+                              className={`${c.bg} rounded px-1.5 py-0.5 truncate cursor-grab active:cursor-grabbing`}
                               onClick={(e) => { e.stopPropagation(); setPanelApt(apt); }}
                             >
                               <span className={`text-[10px] font-semibold font-body ${c.text}`}>
@@ -219,7 +311,7 @@ export default function AgendaPage() {
                         )}
                       </div>
                     )}
-                  </button>
+                  </div>
                 );
               })}
             </div>
@@ -258,15 +350,27 @@ export default function AgendaPage() {
                 </div>
 
                 {dayViewDates.map(d => {
-                  const dayApts = agendamentos.filter(a => a.data === fmtISO(d));
-                  const isToday = fmtISO(d) === fmtISO(today);
+                  const dataISO = fmtISO(d);
+                  const dayApts = agendamentos.filter(a => a.data === dataISO);
+                  const isToday = dataISO === fmtISO(today);
+                  const isDragOver = dragOverDay === dataISO;
                   return (
-                    <div key={fmtISO(d)} className={`flex-1 relative border-l border-outline-variant/20 ${isToday ? "bg-primary/5" : ""}`} style={{ height: `${HOURS.length * CELL_H}px` }}>
+                    <div
+                      key={dataISO}
+                      onDragOver={(e) => handleDragOverColuna(e, dataISO)}
+                      onDragLeave={() => setDragOverDay(null)}
+                      onDrop={(e) => handleDropColuna(e, dataISO)}
+                      onClick={(e) => handleClickColuna(e, dataISO)}
+                      className={`flex-1 relative border-l border-outline-variant/20 cursor-copy transition-colors ${
+                        isDragOver ? "bg-primary/15" : isToday ? "bg-primary/5" : "hover:bg-surface-low/50"
+                      }`}
+                      style={{ height: `${HOURS.length * CELL_H}px` }}
+                    >
                       {HOURS.map(h => (
-                        <div key={h} className="absolute left-0 right-0 border-t border-outline-variant/20" style={{ top: `${(h - 8) * CELL_H}px` }} />
+                        <div key={h} className="absolute left-0 right-0 border-t border-outline-variant/20 pointer-events-none" style={{ top: `${(h - 8) * CELL_H}px` }} />
                       ))}
                       {isToday && showNowLine && (
-                        <div className="absolute left-0 right-0 z-20 flex items-center" style={{ top: `${nowTop}px` }}>
+                        <div className="absolute left-0 right-0 z-20 flex items-center pointer-events-none" style={{ top: `${nowTop}px` }}>
                           <div className="w-2.5 h-2.5 rounded-full bg-primary shrink-0 -ml-1.5" />
                           <div className="flex-1 h-[2px] bg-primary" />
                         </div>
