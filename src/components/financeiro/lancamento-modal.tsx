@@ -25,7 +25,7 @@ export function LancamentoModal({
   atendimentos = [],
 }: {
   onClose: () => void;
-  onSaved: (lista: Lancamento[]) => void;
+  onSaved: (lista: Lancamento[], dataSalva: string) => void;
   lancamento?: Lancamento;
   atendimentos?: AtendimentoOption[];
 }) {
@@ -136,7 +136,7 @@ export function LancamentoModal({
       ? editarLancamento({ ...dados, id: lancamento.id })
       : adicionarLancamento(dados);
 
-    onSaved(nova);
+    onSaved(nova, data);
     onClose();
   }
 

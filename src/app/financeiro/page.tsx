@@ -131,7 +131,12 @@ export default function FinanceiroPage() {
         {modalAberto && (
           <LancamentoModal
             onClose={fecharModal}
-            onSaved={setLancamentos}
+            onSaved={(lista, dataSalva) => {
+              setLancamentos(lista);
+              const [y, m] = dataSalva.split("-");
+              setAno(parseInt(y));
+              setMes(parseInt(m) - 1);
+            }}
             lancamento={editando}
             atendimentos={atendimentos}
           />
