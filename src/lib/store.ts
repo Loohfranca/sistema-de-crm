@@ -26,92 +26,17 @@ export interface Agendamento {
   pagamento: Record<string, unknown> | null;
 }
 
-// ─── Dados iniciais ──────────────────────────────────────────────────────────
-function buildDadosIniciais(): Agendamento[] {
-  const hoje = new Date();
-  function isoDate(offset: number) {
-    const d = new Date(hoje);
-    d.setDate(d.getDate() + offset);
-    return d.toISOString().slice(0, 10);
-  }
-
-  return [
-    {
-      id: 1,
-      cliente: "Marina Silva",
-      avatar: "MS",
-      procedimento: "Limpeza de Pele Profissional",
-      data: isoDate(-3),
-      horaInicio: 9, minutoInicio: 30, duracao: 60,
-      profissional: "Dra. Helena",
-      valor: 350,
-      telefone: "(11) 98765-4321",
-      observacoes: "Pele sensível — usar produtos hipoalergênicos.",
-      retorno: isoDate(25),
-      cor: "gold",
-      status: "realizado",
-      pagamento: null,
-    },
-    {
-      id: 2,
-      cliente: "Camila Rodrigues",
-      avatar: "CR",
-      procedimento: "Aplicação de Botox — Testa e Glabela",
-      data: isoDate(-3),
-      horaInicio: 10, minutoInicio: 0, duracao: 45,
-      profissional: "Dra. Helena",
-      valor: 1500,
-      telefone: "(11) 91234-5678",
-      cor: "rose",
-      status: "realizado",
-      pagamento: null,
-    },
-    {
-      id: 3,
-      cliente: "Fernanda Costa",
-      avatar: "FC",
-      procedimento: "Preenchimento Labial com Ácido Hialurônico",
-      data: isoDate(0),
-      horaInicio: 11, minutoInicio: 0, duracao: 30,
-      profissional: "Dra. Helena",
-      valor: 1200,
-      telefone: "(21) 99876-5432",
-      cor: "teal",
-      status: "agendado",
-      pagamento: null,
-    },
-    {
-      id: 4,
-      cliente: "Ana Beatriz",
-      avatar: "AB",
-      procedimento: "Peeling Químico — Ácido Mandélico",
-      data: isoDate(1),
-      horaInicio: 14, minutoInicio: 0, duracao: 40,
-      profissional: "Dra. Helena",
-      valor: 450,
-      telefone: "(21) 98765-1234",
-      cor: "rose",
-      status: "agendado",
-      pagamento: null,
-    },
-  ];
-}
-
 // ─── Persistência ─────────────────────────────────────────────────────────────
-const STORAGE_KEY = "crm_agenda_v5";
+const STORAGE_KEY = "crm_agenda_v6";
 
 export function getAgendamentos(): Agendamento[] {
-  if (typeof window === "undefined") return buildDadosIniciais();
+  if (typeof window === "undefined") return [];
   const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) {
-    const dados = buildDadosIniciais();
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(dados));
-    return dados;
-  }
+  if (!raw) return [];
   try {
     return JSON.parse(raw) as Agendamento[];
   } catch {
-    return buildDadosIniciais();
+    return [];
   }
 }
 

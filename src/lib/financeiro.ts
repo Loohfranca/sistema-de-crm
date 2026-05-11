@@ -35,40 +35,16 @@ export interface ParcelaMes {
 import type { Lancamento } from "@/types/financeiro";
 export type { Lancamento };
 
-const LANCAMENTOS_KEY = "crm_lancamentos_v1";
-
-function buildLancamentosIniciais(): Lancamento[] {
-  const hoje = new Date();
-  function isoDate(offset: number) {
-    const d = new Date(hoje);
-    d.setDate(d.getDate() + offset);
-    return d.toISOString().slice(0, 10);
-  }
-
-  return [
-    { id: "l1", tipo: "entrada", descricao: "Limpeza de Pele — Marina Silva", valor: 350, categoria: "Procedimento", data: isoDate(-5) },
-    { id: "l2", tipo: "entrada", descricao: "Botox Testa — Camila Rodrigues", valor: 1500, categoria: "Procedimento", data: isoDate(-4) },
-    { id: "l3", tipo: "saida",   descricao: "Materiais descartáveis", valor: 480, categoria: "Material", data: isoDate(-3) },
-    { id: "l4", tipo: "entrada", descricao: "Preenchimento Labial — Fernanda Costa", valor: 1200, categoria: "Procedimento", data: isoDate(-2) },
-    { id: "l5", tipo: "saida",   descricao: "Aluguel consultório — Abril", valor: 3200, categoria: "Aluguel", data: isoDate(-1) },
-    { id: "l6", tipo: "entrada", descricao: "Peeling Químico — Ana Beatriz", valor: 450, categoria: "Procedimento", data: isoDate(0) },
-    { id: "l7", tipo: "saida",   descricao: "Instagram Ads — Abril", valor: 600, categoria: "Marketing", data: isoDate(-6) },
-    { id: "l8", tipo: "entrada", descricao: "Pacote 5 sessões — Isabella Cavalcanti", valor: 2800, categoria: "Pacote", data: isoDate(-7) },
-  ];
-}
+const LANCAMENTOS_KEY = "crm_lancamentos_v2";
 
 export function getLancamentos(): Lancamento[] {
-  if (typeof window === "undefined") return buildLancamentosIniciais();
+  if (typeof window === "undefined") return [];
   const raw = localStorage.getItem(LANCAMENTOS_KEY);
-  if (!raw) {
-    const dados = buildLancamentosIniciais();
-    localStorage.setItem(LANCAMENTOS_KEY, JSON.stringify(dados));
-    return dados;
-  }
+  if (!raw) return [];
   try {
     return JSON.parse(raw) as Lancamento[];
   } catch {
-    return buildLancamentosIniciais();
+    return [];
   }
 }
 
