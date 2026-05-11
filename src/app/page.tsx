@@ -188,7 +188,7 @@ export default function Dashboard() {
     },
   ];
 
-  const [vistaAgenda, setVistaAgenda] = useState<"hoje" | "semana">("hoje");
+  const [vistaAgenda, setVistaAgenda] = useState<"hoje" | "semana" | "mes">("hoje");
 
   const hojeISO = new Date().toISOString().slice(0, 10);
   const hojeFormatado = isoParaBR(hojeISO);
@@ -204,6 +204,13 @@ export default function Dashboard() {
   const segISO = seg.toISOString().slice(0, 10);
   const domISO = dom.toISOString().slice(0, 10);
 
+  // Month date range
+  const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+  const fimMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+  const inicioMesISO = inicioMes.toISOString().slice(0, 10);
+  const fimMesISO = fimMes.toISOString().slice(0, 10);
+  const mesFormatado = hoje.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+
   // Agenda: only pending ("agendado")
   const agendaHoje = lista
     .filter((a) => a.data === hojeISO && a.status === "agendado")
@@ -213,7 +220,11 @@ export default function Dashboard() {
     .filter((a) => a.data >= segISO && a.data <= domISO && a.status === "agendado")
     .sort((a, b) => a.data.localeCompare(b.data) || a.horaInicio - b.horaInicio);
 
-  const agendaAtual = vistaAgenda === "hoje" ? agendaHoje : agendaSemana;
+  const agendaMes = lista
+    .filter((a) => a.data >= inicioMesISO && a.data <= fimMesISO && a.status === "agendado")
+    .sort((a, b) => a.data.localeCompare(b.data) || a.horaInicio - b.horaInicio);
+
+  const agendaAtual = vistaAgenda === "hoje" ? agendaHoje : vistaAgenda === "semana" ? agendaSemana : agendaMes;
 
   // Histórico: realizados + cancelados (most recent first)
   const recentes = lista
@@ -246,8 +257,8 @@ export default function Dashboard() {
     .find((a) => a.horaInicio * 60 + a.minutoInicio >= minutosAgora) ??
     todosHoje.find((a) => a.status === "agendado");
 
-  // Timeline: hoje mostra todos status; semana mostra apenas pendentes da semana
-  const timelineSource = vistaAgenda === "hoje" ? todosHoje : agendaSemana;
+  // Timeline: hoje mostra todos status; semana/mês mostram apenas pendentes
+  const timelineSource = vistaAgenda === "hoje" ? todosHoje : vistaAgenda === "semana" ? agendaSemana : agendaMes;
   const timelineItems = timelineSource.map((a) => {
     const inicio = a.horaInicio * 60 + a.minutoInicio;
     const fim = inicio + a.duracao;
@@ -419,12 +430,14 @@ export default function Dashboard() {
               <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant/15">
                 <div>
                   <h2 className="font-display text-base font-bold text-on-surface">
-                    {vistaAgenda === "hoje" ? "Agenda de hoje" : "Agenda da semana"}
+                    {vistaAgenda === "hoje" ? "Agenda de hoje" : vistaAgenda === "semana" ? "Agenda da semana" : "Agenda do mês"}
                   </h2>
-                  <p className="text-[11px] text-on-surface-variant font-body mt-0.5">
+                  <p className="text-[11px] text-on-surface-variant font-body mt-0.5 capitalize">
                     {vistaAgenda === "hoje"
                       ? `${hojeFormatado} · ${timelineItems.length} atendimento${timelineItems.length !== 1 ? "s" : ""}`
-                      : `${isoParaBR(segISO)} – ${isoParaBR(domISO)} · ${agendaAtual.length}`
+                      : vistaAgenda === "semana"
+                      ? `${isoParaBR(segISO)} – ${isoParaBR(domISO)} · ${agendaAtual.length}`
+                      : `${mesFormatado} · ${agendaAtual.length}`
                     }
                   </p>
                 </div>
@@ -450,6 +463,16 @@ export default function Dashboard() {
                     >
                       Semana
                     </button>
+                    <button
+                      onClick={() => setVistaAgenda("mes")}
+                      className={`px-3 py-1 rounded-full text-[10px] font-semibold font-body transition-all ${
+                        vistaAgenda === "mes"
+                          ? "gradient-primary text-on-primary shadow-sm"
+                          : "text-on-surface-variant hover:text-on-surface"
+                      }`}
+                    >
+                      Mês
+                    </button>
                   </div>
                 </div>
               </div>
@@ -462,7 +485,7 @@ export default function Dashboard() {
                     </div>
                     <p className="text-sm font-semibold text-on-surface font-body">Agenda livre</p>
                     <p className="text-[11px] text-on-surface-variant font-body mt-1 mb-4">
-                      Nenhum atendimento para {vistaAgenda === "hoje" ? "hoje" : "esta semana"}
+                      Nenhum atendimento para {vistaAgenda === "hoje" ? "hoje" : vistaAgenda === "semana" ? "esta semana" : "este mês"}
                     </p>
                     <Link
                       href="/atendimentos/novo"
@@ -487,8 +510,13 @@ export default function Dashboard() {
                             href="/agenda"
                             className="group relative flex items-stretch gap-4"
                           >
-                            {/* horário */}
-                            <div className="w-12 shrink-0 pt-2 text-right">
+                            {/* horário + dia (se semana/mes) */}
+                            <div className="w-14 shrink-0 pt-2 text-right">
+                              {vistaAgenda !== "hoje" && (
+                                <p className="text-[10px] font-semibold text-primary font-body uppercase tracking-wide">
+                                  {new Date(apt.data + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }).replace(".", "")}
+                                </p>
+                              )}
                               <p className={`text-xs font-bold font-body tabular-nums ${isCurrent ? "text-primary" : "text-on-surface"}`}>
                                 {String(apt.horaInicio).padStart(2,"0")}:{String(apt.minutoInicio).padStart(2,"0")}
                               </p>
