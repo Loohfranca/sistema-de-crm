@@ -22,6 +22,7 @@ import type { Cliente } from "@/lib/clientes";
 import { PrismaMark } from "./topbar/prisma-mark";
 import { NotificationsBell } from "./topbar/notifications-bell";
 import { ProfileMenu } from "./topbar/profile-menu";
+import { ThemeToggle } from "./theme-toggle";
 
 interface Atalho {
   label: string;
@@ -240,8 +241,9 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
           </AnimatePresence>
         </div>
 
-        {/* Direita — apenas notificações + perfil */}
+        {/* Direita — tema + notificações + perfil */}
         <div className="flex items-center gap-1 shrink-0">
+          <ThemeToggle />
           <NotificationsBell />
           <ProfileMenu />
         </div>

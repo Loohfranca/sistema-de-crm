@@ -20,11 +20,11 @@ import {
   UserCog,
   ScrollText,
   Stethoscope,
+  FileText,
 } from "lucide-react";
 import { useSidebarCollapsed } from "@/lib/sidebar-state";
 import { EASE_OUT_EXPO } from "@/lib/motion";
 
-import { ThemeToggle } from "./theme-toggle";
 
 /* ─── Seção MENU ─────────────────────────────────────────────────────────────── */
 const menuNavigation = [
@@ -35,6 +35,7 @@ const menuNavigation = [
   { name: "Procedimentos", href: "/procedimentos", icon: Sparkles },
   { name: "Financeiro", href: "/financeiro", icon: BarChart3 },
   { name: "Estoque", href: "/estoque", icon: Package },
+  { name: "Relatório", href: "/relatorio", icon: FileText },
 ];
 
 /* ─── Seção SISTEMA ──────────────────────────────────────────────────────────── */
@@ -91,9 +92,9 @@ export function Sidebar({
     return (
       <Link
         href={item.href}
-        className={`group relative flex items-center rounded-2xl transition-all duration-150 ease-out gap-3 px-4 py-3 ${
+        className={`group relative flex items-center rounded-xl transition-all duration-150 ease-out gap-3 px-3 py-2 ${
           collapsedIconOnly
-            ? "md:justify-center md:w-14 md:h-14 md:mx-auto md:gap-0 md:px-0 md:py-0"
+            ? "md:justify-center md:w-12 md:h-12 md:mx-auto md:gap-0 md:px-0 md:py-0"
             : ""
         } ${
           active
@@ -168,7 +169,7 @@ export function Sidebar({
 
         {/* Clínica */}
         <div
-          className={`pt-7 pb-6 ${collapsed ? "md:flex md:justify-center px-5" : "px-5"}`}
+          className={`pt-5 pb-3 ${collapsed ? "md:flex md:justify-center px-5" : "px-5"}`}
         >
           <Link
             href="/"
@@ -192,13 +193,13 @@ export function Sidebar({
         <div className={`flex-1 overflow-y-auto pb-2 ${collapsed ? "md:px-3 px-4" : "px-4"}`}>
 
           {/* ─── Seção MENU ───────────────────────────────────────────────────── */}
-          <div className="mb-2">
+          <div className="mb-1">
             {!collapsed && (
-              <p className="px-4 py-2 text-[10px] font-bold text-on-surface-variant font-body uppercase tracking-widest">
+              <p className="px-3 py-1 text-[10px] font-bold text-on-surface-variant font-body uppercase tracking-widest">
                 Menu
               </p>
             )}
-            <div className="space-y-1">
+            <div className="space-y-0.5">
               {menuNavigation.map((item) => (
                 <NavItem key={item.name} item={item} />
               ))}
@@ -206,16 +207,16 @@ export function Sidebar({
           </div>
 
           {/* ─── Divider ──────────────────────────────────────────────────────── */}
-          <div className={`my-3 border-t border-outline-variant/15 ${collapsed ? "md:mx-1" : ""}`} />
+          <div className={`my-2 border-t border-outline-variant/15 ${collapsed ? "md:mx-1" : ""}`} />
 
           {/* ─── Seção SISTEMA ────────────────────────────────────────────────── */}
           <div>
             {!collapsed && (
-              <p className="px-4 py-2 text-[10px] font-bold text-on-surface-variant font-body uppercase tracking-widest">
+              <p className="px-3 py-1 text-[10px] font-bold text-on-surface-variant font-body uppercase tracking-widest">
                 Sistema
               </p>
             )}
-            <div className="space-y-1">
+            <div className="space-y-0.5">
               {sistemaNavigation.map((item) => (
                 <NavItem key={item.name} item={item} />
               ))}
@@ -224,15 +225,15 @@ export function Sidebar({
         </div>
 
         {/* Footer — CTA + Tema */}
-        <div className={`border-t border-outline-variant/15 ${collapsed ? "md:px-3 px-4 md:py-4" : "px-4"} py-4 space-y-2`}>
+        <div className={`border-t border-outline-variant/15 ${collapsed ? "md:px-3 px-4 md:py-3" : "px-4"} py-3 space-y-1.5`}>
           {/* Novo Atendimento — CTA destaque */}
           <Link
             href="/atendimentos/novo"
             aria-label="Novo Atendimento"
-            className={`group relative flex items-center gap-2 rounded-2xl gradient-primary text-on-primary font-semibold font-body shadow-sm hover:opacity-90 transition-all ${
+            className={`group relative flex items-center gap-2 rounded-xl gradient-primary text-on-primary font-semibold font-body shadow-sm hover:opacity-90 transition-all ${
               collapsed
-                ? "md:w-14 md:h-14 md:mx-auto md:justify-center md:px-0 md:py-0 px-4 py-3 justify-center"
-                : "px-4 py-3 justify-center"
+                ? "md:w-12 md:h-12 md:mx-auto md:justify-center md:px-0 md:py-0 px-4 py-2.5 justify-center"
+                : "px-4 py-2.5 justify-center"
             }`}
           >
             <CalendarPlus className="w-[18px] h-[18px] shrink-0" strokeWidth={2} />
@@ -246,10 +247,6 @@ export function Sidebar({
             )}
           </Link>
 
-          {/* Tema */}
-          <div className={collapsed ? "md:flex md:justify-center" : "flex justify-center"}>
-            <ThemeToggle />
-          </div>
         </div>
       </aside>
     </>
