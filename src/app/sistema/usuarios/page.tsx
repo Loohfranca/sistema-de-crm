@@ -161,8 +161,8 @@ export default function UsuariosPage() {
                 >
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-primary-fixed-dim flex items-center justify-center shrink-0">
-                        <span className="text-xs font-semibold text-on-primary-fixed font-display">
+                      <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center shrink-0">
+                        <span className="text-xs font-semibold text-on-primary font-display">
                           {u.avatar}
                         </span>
                       </div>

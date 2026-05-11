@@ -113,8 +113,8 @@ export default function ConfiguracoesPage() {
             </div>
             <div className="flex items-start gap-6 mb-6">
               <div className="relative">
-                <div className="w-20 h-20 rounded-3xl bg-primary-fixed-dim flex items-center justify-center">
-                  <span className="text-2xl font-bold text-on-primary-fixed font-display">
+                <div className="w-20 h-20 rounded-3xl bg-primary flex items-center justify-center">
+                  <span className="text-2xl font-bold text-on-primary font-display">
                     {iniciais}
                   </span>
                 </div>

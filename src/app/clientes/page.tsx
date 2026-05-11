@@ -193,8 +193,8 @@ export default function ClientesPage() {
               className="grid grid-cols-[2fr_1fr_1fr_1fr_auto] gap-4 px-6 py-4 items-center hover:bg-surface-low transition-colors group"
             >
               <Link href={`/clientes/${client.id}`} className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-full bg-primary-fixed-dim flex items-center justify-center shrink-0">
-                  <span className="text-xs font-semibold text-on-primary-fixed">{client.avatar}</span>
+                <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center shrink-0">
+                  <span className="text-xs font-semibold text-on-primary">{client.avatar}</span>
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-on-surface font-body group-hover:text-primary transition-colors truncate">{client.name}</p>

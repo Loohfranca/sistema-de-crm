@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 /* ═══════════════════════════════════════════════════════════════════════════
    PALETA 1 (DEFAULT) — SUNSET (cream + orange vibrante)
    Adaptado de tema shadcn/tweakcn → Material Design 3.
@@ -272,6 +274,8 @@ body {
 .ghost-border {
   border: 1px solid color-mix(in srgb, var(--outline-variant) 50%, transparent);
 }
+
+
 
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: var(--surface-container-low); }

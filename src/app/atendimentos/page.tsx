@@ -126,8 +126,8 @@ export default function AtendimentosPage() {
             >
               <div className="flex items-center gap-5 px-5 py-4">
                 {/* Avatar */}
-                <div className="w-12 h-12 rounded-full bg-primary-fixed-dim flex items-center justify-center shrink-0">
-                  <span className="text-sm font-semibold text-on-primary-fixed">{apt.avatar}</span>
+                <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center shrink-0">
+                  <span className="text-sm font-semibold text-on-primary">{apt.avatar}</span>
                 </div>
 
                 {/* Info */}

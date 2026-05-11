@@ -101,11 +101,11 @@ export function ClienteFormModal({
         >
           <div className="flex items-center justify-between px-8 pt-8 pb-2">
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-primary-fixed-dim flex items-center justify-center shrink-0">
+              <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center shrink-0">
                 {initials ? (
-                  <span className="text-lg font-bold text-on-primary-fixed font-display">{initials}</span>
+                  <span className="text-lg font-bold text-on-primary font-display">{initials}</span>
                 ) : (
-                  <User className="w-6 h-6 text-on-primary-fixed" />
+                  <User className="w-6 h-6 text-on-primary" />
                 )}
               </div>
               <div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
   UserPlus,
@@ -39,11 +39,20 @@ export default function ProfissionaisPage() {
   const [editId, setEditId] = useState<number | null>(null);
   const [showToast, setShowToast] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
+  const [isOnyx, setIsOnyx] = useState(false);
   const [form, setForm] = useState({
     nome: "",
     especialidade: "",
     diasAtendimento: ["Seg", "Ter", "Qua", "Qui", "Sex"] as DiaSemana[],
   });
+
+  useEffect(() => {
+    const check = () => setIsOnyx(document.documentElement.dataset.palette === "onyx");
+    check();
+    const obs = new MutationObserver(check);
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["data-palette"] });
+    return () => obs.disconnect();
+  }, []);
 
   const filtered = search.trim()
     ? profissionais.filter((p) =>
@@ -227,11 +236,11 @@ export default function ProfissionaisPage() {
                     <div className="flex items-center gap-3">
                       <div
                         className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-                        style={{ backgroundColor: p.cor + "22" }}
+                        style={{ backgroundColor: isOnyx ? "#6b7280" : (p.cor + "22") }}
                       >
                         <span
                           className="text-xs font-semibold font-display"
-                          style={{ color: p.cor }}
+                          style={{ color: isOnyx ? "#ffffff" : p.cor }}
                         >
                           {p.avatar}
                         </span>

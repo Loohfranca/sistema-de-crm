@@ -18,7 +18,7 @@ function HoverTooltip({ apt }: { apt: Agendamento }) {
       <div style={{ position: "absolute", left: -6, top: 16, width: 0, height: 0, borderTop: "6px solid transparent", borderBottom: "6px solid transparent", borderRight: "6px solid white", filter: "drop-shadow(-1px 0 1px rgba(0,0,0,0.06))" }} />
       <div className="bg-surface-lowest rounded-2xl overflow-hidden" style={{ boxShadow: "0 8px 32px rgba(27,28,28,0.14)" }}>
         <div className={`${c.bg} ${c.border} border-l-4 px-4 py-3 flex items-center gap-3`}>
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-white/50">
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-white/60 dark:bg-black/30">
             <span className={`text-sm font-bold font-display ${c.text}`}>{apt.avatar}</span>
           </div>
           <div className="min-w-0">
