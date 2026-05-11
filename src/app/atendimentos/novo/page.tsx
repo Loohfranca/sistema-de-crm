@@ -17,7 +17,9 @@ import {
 } from "lucide-react";
 import { getServicos } from "@/lib/servicos";
 import { getAgendamentos, salvarAgendamentos } from "@/lib/store";
+import { addLog } from "@/lib/logs";
 import { getClientes } from "@/lib/clientes";
+import { getProfissionais, PROFISSIONAIS_EVENT, type Profissional } from "@/lib/profissionais";
 import type { Cliente } from "@/lib/clientes";
 import type { Servico } from "@/types/servico";
 import { WhatsAppConfirmacaoModal } from "@/components/agendamentos/whatsapp-confirmacao-modal";
@@ -33,7 +35,8 @@ export default function NovoAtendimentoPage() {
   // Form state
   const [cliente, setCliente] = useState("");
   const [telefone, setTelefone] = useState("");
-  const [profissional, setProfissional] = useState("Dra. Helena");
+  const [profissional, setProfissional] = useState("");
+  const [profissionais, setProfissionais] = useState<Profissional[]>([]);
   const [data, setData] = useState("");
   const [horario, setHorario] = useState("");
   const [observacoes, setObservacoes] = useState("");
@@ -57,12 +60,22 @@ export default function NovoAtendimentoPage() {
   const [confirmacaoTel, setConfirmacaoTel] = useState("");
 
   const carregar = useCallback(() => setServicos(getServicos()), []);
+  const carregarProf = useCallback(() => {
+    const lista = getProfissionais().filter((p) => p.ativo);
+    setProfissionais(lista);
+    setProfissional((cur) => cur || lista[0]?.nome || "");
+  }, []);
 
   useEffect(() => {
     carregar();
+    carregarProf();
     window.addEventListener("crm_servicos_updated", carregar);
-    return () => window.removeEventListener("crm_servicos_updated", carregar);
-  }, [carregar]);
+    window.addEventListener(PROFISSIONAIS_EVENT, carregarProf);
+    return () => {
+      window.removeEventListener("crm_servicos_updated", carregar);
+      window.removeEventListener(PROFISSIONAIS_EVENT, carregarProf);
+    };
+  }, [carregar, carregarProf]);
 
   // Load clientes from clientes DB + agendamentos (merge unique names)
   useEffect(() => {
@@ -82,12 +95,13 @@ export default function NovoAtendimentoPage() {
     return () => window.removeEventListener("crm_clientes_updated", sync);
   }, []);
 
-  // Auto-fill telefone quando o cliente digitado corresponde a um cadastrado
-  useEffect(() => {
-    if (!cliente) return;
-    const match = clientesObjs.find((c) => c.name === cliente);
-    if (match?.phone && !telefone) setTelefone(match.phone);
-  }, [cliente, clientesObjs, telefone]);
+  function handleClienteChange(nome: string) {
+    setCliente(nome);
+    if (!telefone) {
+      const match = clientesObjs.find((c) => c.name === nome);
+      if (match?.phone) setTelefone(match.phone);
+    }
+  }
 
   const toggleService = (id: string) => {
     setSelectedServices((prev) =>
@@ -133,6 +147,12 @@ export default function NovoAtendimentoPage() {
     };
 
     salvarAgendamentos([...lista, novo]);
+    addLog({
+      usuario: "Administrador",
+      acao: "Criou",
+      entidade: "agendamento",
+      descricao: `Agendou ${procedimentoNome} para ${cliente}`,
+    });
 
     // Abre modal de confirmação por WhatsApp em vez de redirecionar direto
     setConfirmacaoCtx({
@@ -192,7 +212,7 @@ export default function NovoAtendimentoPage() {
                   type="text"
                   list="clientes-list"
                   value={cliente}
-                  onChange={(e) => setCliente(e.target.value)}
+                  onChange={(e) => handleClienteChange(e.target.value)}
                   placeholder="Nome da cliente"
                   className="w-full px-4 py-3 rounded-2xl bg-surface-high text-on-surface text-sm font-body focus:outline-none focus:bg-surface-lowest focus:ring-2 focus:ring-primary/20 transition-all appearance-none"
                 />
@@ -206,13 +226,21 @@ export default function NovoAtendimentoPage() {
                 <label className="block text-xs font-semibold text-on-surface-variant font-body uppercase tracking-wider mb-2">
                   Profissional
                 </label>
-                <input
-                  type="text"
-                  value={profissional}
-                  onChange={(e) => setProfissional(e.target.value)}
-                  placeholder="Nome do profissional"
-                  className="w-full px-4 py-3 rounded-2xl bg-surface-high text-on-surface text-sm font-body focus:outline-none focus:bg-surface-lowest focus:ring-2 focus:ring-primary/20 transition-all"
-                />
+                {profissionais.length > 0 ? (
+                  <select
+                    value={profissional}
+                    onChange={(e) => setProfissional(e.target.value)}
+                    className="w-full px-4 py-3 rounded-2xl bg-surface-high text-on-surface text-sm font-body focus:outline-none focus:bg-surface-lowest focus:ring-2 focus:ring-primary/20 transition-all appearance-none"
+                  >
+                    {profissionais.map((p) => (
+                      <option key={p.id} value={p.nome}>{p.nome}{p.especialidade ? ` — ${p.especialidade}` : ""}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <Link href="/sistema/profissionais" className="block w-full px-4 py-3 rounded-2xl bg-surface-high text-on-surface-variant text-sm font-body text-center hover:bg-surface-container transition-colors">
+                    Cadastre um profissional →
+                  </Link>
+                )}
               </div>
               <div className="col-span-2">
                 <label className="block text-xs font-semibold text-on-surface-variant font-body uppercase tracking-wider mb-2">

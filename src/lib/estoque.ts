@@ -4,6 +4,7 @@
 
 import type { Produto, MaterialServico, AlertaEstoque } from "@/types/produto";
 import { getServicos } from "./servicos";
+import { addLog } from "./logs";
 
 const PRODUTOS_KEY = "crm_produtos_v1";
 const MATERIAIS_KEY = "crm_materiais_servico_v1";
@@ -63,6 +64,12 @@ export function adicionarProduto(produto: Omit<Produto, "id">): Produto[] {
   const novo: Produto = { ...produto, id: `p${Date.now()}` };
   const atualizada = [...lista, novo];
   salvarProdutos(atualizada);
+  addLog({
+    usuario: "Administrador",
+    acao: "Criou",
+    entidade: "estoque",
+    descricao: `Adicionou produto ${novo.nome}`,
+  });
   return atualizada;
 }
 
@@ -70,14 +77,29 @@ export function editarProduto(produto: Produto): Produto[] {
   const lista = getProdutos();
   const atualizada = lista.map((p) => (p.id === produto.id ? produto : p));
   salvarProdutos(atualizada);
+  addLog({
+    usuario: "Administrador",
+    acao: "Editou",
+    entidade: "estoque",
+    descricao: `Editou produto ${produto.nome}`,
+  });
   return atualizada;
 }
 
 export function removerProduto(id: string): Produto[] {
+  const alvo = getProdutos().find((p) => p.id === id);
   const lista = getProdutos().filter((p) => p.id !== id);
   salvarProdutos(lista);
   const vinculos = getMateriais().filter((m) => m.produtoId !== id);
   salvarMateriais(vinculos);
+  if (alvo) {
+    addLog({
+      usuario: "Administrador",
+      acao: "Excluiu",
+      entidade: "estoque",
+      descricao: `Removeu produto ${alvo.nome}`,
+    });
+  }
   return lista;
 }
 

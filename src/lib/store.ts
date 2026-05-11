@@ -2,6 +2,7 @@
 // Tipos financeiros (Pagamento, Parcela, taxas) foram movidos para src/lib/financeiro.ts
 
 import { consumirMateriais } from "./estoque";
+import { addLog } from "./logs";
 
 export type StatusApt = "agendado" | "realizado" | "cancelado";
 
@@ -122,8 +123,33 @@ export function salvarAgendamentos(dados: Agendamento[]): void {
 
 export function atualizarAgendamento(id: number, patch: Partial<Omit<Agendamento, "id">>): Agendamento[] {
   const lista = getAgendamentos();
+  const alvo = lista.find((a) => a.id === id);
   const atualizada = lista.map((a) => (a.id === id ? { ...a, ...patch } : a));
   salvarAgendamentos(atualizada);
+  if (alvo) {
+    addLog({
+      usuario: "Administrador",
+      acao: "Editou",
+      entidade: "agendamento",
+      descricao: `Editou agendamento de ${alvo.cliente} (${alvo.procedimento})`,
+    });
+  }
+  return atualizada;
+}
+
+export function removerAgendamento(id: number): Agendamento[] {
+  const lista = getAgendamentos();
+  const alvo = lista.find((a) => a.id === id);
+  const atualizada = lista.filter((a) => a.id !== id);
+  salvarAgendamentos(atualizada);
+  if (alvo) {
+    addLog({
+      usuario: "Administrador",
+      acao: "Excluiu",
+      entidade: "agendamento",
+      descricao: `Removeu agendamento de ${alvo.cliente} (${alvo.procedimento})`,
+    });
+  }
   return atualizada;
 }
 
@@ -138,6 +164,21 @@ export function atualizarStatus(id: number, status: StatusApt, retorno?: string)
   // Consumo de estoque ao transitar para "realizado"
   if (anterior && anterior.status !== "realizado" && status === "realizado") {
     consumirMateriais(anterior.procedimento);
+  }
+
+  if (anterior && anterior.status !== status) {
+    const mapAcao = {
+      realizado: { acao: "Editou" as const, verbo: "concluiu" },
+      cancelado: { acao: "Editou" as const, verbo: "cancelou" },
+      agendado: { acao: "Editou" as const, verbo: "reabriu" },
+    };
+    const m = mapAcao[status];
+    addLog({
+      usuario: "Administrador",
+      acao: m.acao,
+      entidade: status === "realizado" ? "atendimento" : "agendamento",
+      descricao: `${m.verbo[0].toUpperCase() + m.verbo.slice(1)} atendimento de ${anterior.cliente}`,
+    });
   }
 
   return nova;

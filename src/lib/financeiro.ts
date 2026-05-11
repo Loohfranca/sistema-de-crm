@@ -3,6 +3,7 @@
 // Apenas componentes dentro de src/components/financeiro/ e src/app/financeiro/ devem usá-lo.
 
 import type { Agendamento } from "./store";
+import { addLog } from "./logs";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 export type PaymentMethod = "dinheiro" | "debito" | "credito" | "pix" | null;
@@ -82,6 +83,12 @@ export function adicionarLancamento(lancamento: Omit<Lancamento, "id">): Lancame
   const novo: Lancamento = { ...lancamento, id: `l${Date.now()}` };
   const atualizada = [novo, ...lista];
   salvarLancamentos(atualizada);
+  addLog({
+    usuario: "Administrador",
+    acao: "Criou",
+    entidade: "financeiro",
+    descricao: `Lançou ${novo.tipo === "entrada" ? "entrada" : "saída"}: ${novo.descricao} (${formatBRL(novo.valor)})`,
+  });
   return atualizada;
 }
 
@@ -89,13 +96,28 @@ export function editarLancamento(lancamento: Lancamento): Lancamento[] {
   const lista = getLancamentos();
   const atualizada = lista.map((l) => (l.id === lancamento.id ? lancamento : l));
   salvarLancamentos(atualizada);
+  addLog({
+    usuario: "Administrador",
+    acao: "Editou",
+    entidade: "financeiro",
+    descricao: `Editou lançamento: ${lancamento.descricao}`,
+  });
   return atualizada;
 }
 
 export function removerLancamento(id: string): Lancamento[] {
   const lista = getLancamentos();
+  const alvo = lista.find((l) => l.id === id);
   const atualizada = lista.filter((l) => l.id !== id);
   salvarLancamentos(atualizada);
+  if (alvo) {
+    addLog({
+      usuario: "Administrador",
+      acao: "Excluiu",
+      entidade: "financeiro",
+      descricao: `Removeu lançamento: ${alvo.descricao}`,
+    });
+  }
   return atualizada;
 }
 

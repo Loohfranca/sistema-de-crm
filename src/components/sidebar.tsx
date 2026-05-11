@@ -17,13 +17,17 @@ import {
   ChevronRight,
   X,
   Flower2,
+  UserCog,
+  ScrollText,
+  Stethoscope,
 } from "lucide-react";
 import { useSidebarCollapsed } from "@/lib/sidebar-state";
 import { EASE_OUT_EXPO } from "@/lib/motion";
 
 import { ThemeToggle } from "./theme-toggle";
 
-const navigation = [
+/* ─── Seção MENU ─────────────────────────────────────────────────────────────── */
+const menuNavigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Clientes", href: "/clientes", icon: Users },
   { name: "Agenda", href: "/agenda", icon: Calendar },
@@ -31,6 +35,14 @@ const navigation = [
   { name: "Procedimentos", href: "/procedimentos", icon: Sparkles },
   { name: "Financeiro", href: "/financeiro", icon: BarChart3 },
   { name: "Estoque", href: "/estoque", icon: Package },
+];
+
+/* ─── Seção SISTEMA ──────────────────────────────────────────────────────────── */
+const sistemaNavigation = [
+  { name: "Usuários", href: "/sistema/usuarios", icon: UserCog },
+  { name: "Logs", href: "/sistema/logs", icon: ScrollText },
+  { name: "Profissionais", href: "/sistema/profissionais", icon: Stethoscope },
+  { name: "Configuração", href: "/configuracoes", icon: Settings },
 ];
 
 export function Sidebar({
@@ -66,6 +78,51 @@ export function Sidebar({
     return () => window.removeEventListener("crm_settings_updated", carregar);
   }, []);
 
+  function isActive(href: string) {
+    if (href === "/") return pathname === "/";
+    return pathname.startsWith(href);
+  }
+
+  /* ─── Componente de item de navegação reutilizável ────────────────────────── */
+  function NavItem({ item }: { item: (typeof menuNavigation)[number] }) {
+    const active = isActive(item.href);
+    const collapsedIconOnly = collapsed;
+
+    return (
+      <Link
+        href={item.href}
+        className={`group relative flex items-center rounded-2xl transition-all duration-150 ease-out gap-3 px-4 py-3 ${
+          collapsedIconOnly
+            ? "md:justify-center md:w-14 md:h-14 md:mx-auto md:gap-0 md:px-0 md:py-0"
+            : ""
+        } ${
+          active
+            ? "bg-primary/10 text-primary font-semibold"
+            : "text-on-surface-variant hover:bg-surface-high/70 hover:text-on-surface"
+        }`}
+      >
+        <item.icon
+          className="shrink-0 w-[20px] h-[20px]"
+          strokeWidth={active ? 2.2 : 1.8}
+        />
+        <span
+          className={`text-sm font-body whitespace-nowrap ${
+            collapsedIconOnly ? "md:hidden" : ""
+          }`}
+        >
+          {item.name}
+        </span>
+
+        {collapsedIconOnly && (
+          <span className="pointer-events-none absolute left-full ml-3 px-3 py-1.5 rounded-xl bg-inverse-surface text-inverse-on-surface text-xs font-semibold font-body whitespace-nowrap opacity-0 group-hover:opacity-100 shadow-ambient transition-opacity duration-150 ease-out z-20 hidden md:block">
+            {item.name}
+          </span>
+        )}
+      </Link>
+    );
+  }
+
+  /* ─── Render ──────────────────────────────────────────────────────────────── */
   return (
     <>
       {/* Backdrop do drawer mobile */}
@@ -131,53 +188,42 @@ export function Sidebar({
           </Link>
         </div>
 
-        {/* Navegação */}
-        <nav
-          className={`flex-1 space-y-1 pb-6 overflow-y-auto ${collapsed ? "md:px-3 px-4" : "px-4"}`}
-        >
-          {navigation.map((item) => {
-            const isActive =
-              item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+        {/* ═══ Área scrollável ═══ */}
+        <div className={`flex-1 overflow-y-auto pb-2 ${collapsed ? "md:px-3 px-4" : "px-4"}`}>
 
-            const collapsedIconOnly = collapsed;
+          {/* ─── Seção MENU ───────────────────────────────────────────────────── */}
+          <div className="mb-2">
+            {!collapsed && (
+              <p className="px-4 py-2 text-[10px] font-bold text-on-surface-variant font-body uppercase tracking-widest">
+                Menu
+              </p>
+            )}
+            <div className="space-y-1">
+              {menuNavigation.map((item) => (
+                <NavItem key={item.name} item={item} />
+              ))}
+            </div>
+          </div>
 
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={`group relative flex items-center rounded-2xl transition-all duration-150 ease-out gap-3 px-4 py-3 ${
-                  collapsedIconOnly
-                    ? "md:justify-center md:w-14 md:h-14 md:mx-auto md:gap-0 md:px-0 md:py-0"
-                    : ""
-                } ${
-                  isActive
-                    ? "bg-primary/10 text-primary font-semibold"
-                    : "text-on-surface-variant hover:bg-surface-high/70 hover:text-on-surface"
-                }`}
-              >
-                <item.icon
-                  className="shrink-0 w-[20px] h-[20px]"
-                  strokeWidth={isActive ? 2.2 : 1.8}
-                />
-                <span
-                  className={`text-sm font-body whitespace-nowrap ${
-                    collapsedIconOnly ? "md:hidden" : ""
-                  }`}
-                >
-                  {item.name}
-                </span>
+          {/* ─── Divider ──────────────────────────────────────────────────────── */}
+          <div className={`my-3 border-t border-outline-variant/15 ${collapsed ? "md:mx-1" : ""}`} />
 
-                {collapsedIconOnly && (
-                  <span className="pointer-events-none absolute left-full ml-3 px-3 py-1.5 rounded-xl bg-inverse-surface text-inverse-on-surface text-xs font-semibold font-body whitespace-nowrap opacity-0 group-hover:opacity-100 shadow-ambient transition-opacity duration-150 ease-out z-20 hidden md:block">
-                    {item.name}
-                  </span>
-                )}
-              </Link>
-            );
-          })}
-        </nav>
+          {/* ─── Seção SISTEMA ────────────────────────────────────────────────── */}
+          <div>
+            {!collapsed && (
+              <p className="px-4 py-2 text-[10px] font-bold text-on-surface-variant font-body uppercase tracking-widest">
+                Sistema
+              </p>
+            )}
+            <div className="space-y-1">
+              {sistemaNavigation.map((item) => (
+                <NavItem key={item.name} item={item} />
+              ))}
+            </div>
+          </div>
+        </div>
 
-        {/* Footer — CTA + Configurações + Tema */}
+        {/* Footer — CTA + Tema */}
         <div className={`border-t border-outline-variant/15 ${collapsed ? "md:px-3 px-4 md:py-4" : "px-4"} py-4 space-y-2`}>
           {/* Novo Atendimento — CTA destaque */}
           <Link
@@ -199,35 +245,6 @@ export function Sidebar({
               </span>
             )}
           </Link>
-
-          {/* Configurações */}
-          {(() => {
-            const isActive = pathname.startsWith("/configuracoes");
-            return (
-              <Link
-                href="/configuracoes"
-                className={`group relative flex items-center rounded-2xl transition-all duration-150 ease-out gap-3 px-4 py-3 ${
-                  collapsed
-                    ? "md:justify-center md:w-14 md:h-14 md:mx-auto md:gap-0 md:px-0 md:py-0"
-                    : ""
-                } ${
-                  isActive
-                    ? "bg-primary/10 text-primary font-semibold"
-                    : "text-on-surface-variant hover:bg-surface-high/70 hover:text-on-surface"
-                }`}
-              >
-                <Settings className="shrink-0 w-[20px] h-[20px]" strokeWidth={isActive ? 2.2 : 1.8} />
-                <span className={`text-sm font-body whitespace-nowrap ${collapsed ? "md:hidden" : ""}`}>
-                  Configurações
-                </span>
-                {collapsed && (
-                  <span className="pointer-events-none absolute left-full ml-3 px-3 py-1.5 rounded-xl bg-inverse-surface text-inverse-on-surface text-xs font-semibold font-body whitespace-nowrap opacity-0 group-hover:opacity-100 shadow-ambient transition-opacity duration-150 ease-out z-20 hidden md:block">
-                    Configurações
-                  </span>
-                )}
-              </Link>
-            );
-          })()}
 
           {/* Tema */}
           <div className={collapsed ? "md:flex md:justify-center" : "flex justify-center"}>

@@ -1,6 +1,8 @@
 // ─── Categorias de procedimentos ────────────────────────────────────────────
 // Lista separada pra manter ordem e permitir categorias sem procedimentos.
 
+import { addLog } from "./logs";
+
 const KEY = "crm_categorias_v1";
 const EVENT = "crm_categorias_updated";
 
@@ -42,17 +44,20 @@ export function adicionarCategoria(nome: string): string[] {
   if (lista.some((c) => c.toLowerCase() === trimmed.toLowerCase())) return lista;
   const atualizada = [...lista, trimmed];
   salvar(atualizada);
+  addLog({ usuario: "Administrador", acao: "Criou", entidade: "categoria", descricao: `Criou categoria ${trimmed}` });
   return atualizada;
 }
 
 export function removerCategoria(nome: string): string[] {
   const lista = getCategorias().filter((c) => c !== nome);
   salvar(lista);
+  addLog({ usuario: "Administrador", acao: "Excluiu", entidade: "categoria", descricao: `Removeu categoria ${nome}` });
   return lista;
 }
 
 export function renomearCategoria(antiga: string, nova: string): string[] {
   const lista = getCategorias().map((c) => (c === antiga ? nova : c));
   salvar(lista);
+  addLog({ usuario: "Administrador", acao: "Editou", entidade: "categoria", descricao: `Renomeou categoria ${antiga} → ${nova}` });
   return lista;
 }

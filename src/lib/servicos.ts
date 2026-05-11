@@ -1,4 +1,5 @@
 import type { Servico } from "@/types/servico";
+import { addLog } from "./logs";
 
 const STORAGE_KEY = "crm_servicos_v1";
 
@@ -34,6 +35,12 @@ export function adicionarServico(servico: Omit<Servico, "id">): Servico[] {
   const novo: Servico = { ...servico, id: `s${Date.now()}` };
   const atualizada = [...lista, novo];
   salvarServicos(atualizada);
+  addLog({
+    usuario: "Administrador",
+    acao: "Criou",
+    entidade: "servico",
+    descricao: `Criou serviço ${novo.nome}`,
+  });
   return atualizada;
 }
 
@@ -41,12 +48,27 @@ export function editarServico(servico: Servico): Servico[] {
   const lista = getServicos();
   const atualizada = lista.map((s) => (s.id === servico.id ? servico : s));
   salvarServicos(atualizada);
+  addLog({
+    usuario: "Administrador",
+    acao: "Editou",
+    entidade: "servico",
+    descricao: `Editou serviço ${servico.nome}`,
+  });
   return atualizada;
 }
 
 export function removerServico(id: string): Servico[] {
   const lista = getServicos();
+  const alvo = lista.find((s) => s.id === id);
   const atualizada = lista.filter((s) => s.id !== id);
   salvarServicos(atualizada);
+  if (alvo) {
+    addLog({
+      usuario: "Administrador",
+      acao: "Excluiu",
+      entidade: "servico",
+      descricao: `Removeu serviço ${alvo.nome}`,
+    });
+  }
   return atualizada;
 }
