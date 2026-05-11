@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { X, Check, CalendarDays, Clock, Stethoscope, User, RotateCcw } from "lucide-react";
+import { X, Check, CalendarDays, Clock, Stethoscope, User, RotateCcw, CalendarClock } from "lucide-react";
 import { colorMap, statusConfig, timeStr, endTime } from "@/lib/agenda-config";
-import type { Agendamento, StatusApt } from "@/lib/store";
+import { remarcarAgendamento, type Agendamento, type StatusApt } from "@/lib/store";
 import {
   backdropTransition,
   backdropVariants,
@@ -22,6 +22,10 @@ export function SidePanel({ apt, onClose, onStatusChange }: {
 
   const [mostrarRetorno, setMostrarRetorno] = useState(false);
   const [dataRetorno, setDataRetorno] = useState("");
+  const [mostrarRemarcar, setMostrarRemarcar] = useState(false);
+  const [novaData, setNovaData] = useState("");
+  const [novaHora, setNovaHora] = useState("");
+  const [motivoRemarcar, setMotivoRemarcar] = useState("");
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -31,6 +35,14 @@ export function SidePanel({ apt, onClose, onStatusChange }: {
 
   function handleRealizar() {
     onStatusChange(apt.id, "realizado", dataRetorno || undefined);
+    onClose();
+  }
+
+  function handleRemarcar() {
+    if (!novaData || !novaHora) return;
+    const [h, m] = novaHora.split(":").map(Number);
+    if (isNaN(h) || isNaN(m)) return;
+    remarcarAgendamento(apt.id, novaData, h, m, motivoRemarcar);
     onClose();
   }
 
@@ -57,7 +69,7 @@ export function SidePanel({ apt, onClose, onStatusChange }: {
         {/* Header strip */}
         <div className={`${c.strip} border-l-4 px-6 py-5 flex items-start justify-between shrink-0`}>
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-white/50 flex items-center justify-center shrink-0">
+            <div className="w-14 h-14 rounded-2xl bg-white/60 dark:bg-black/30 flex items-center justify-center shrink-0">
               <span className={`text-xl font-bold font-display ${c.text}`}>{apt.avatar}</span>
             </div>
             <div>
@@ -98,6 +110,25 @@ export function SidePanel({ apt, onClose, onStatusChange }: {
             <div className="bg-surface-low rounded-2xl p-4">
               <p className="text-[10px] uppercase tracking-widest text-on-surface-variant font-body mb-2">Observações</p>
               <p className="text-sm text-on-surface font-body">{apt.observacoes}</p>
+            </div>
+          )}
+
+          {apt.remarcacoes && apt.remarcacoes.length > 0 && (
+            <div className="bg-surface-low rounded-2xl p-4 space-y-2">
+              <div className="flex items-center gap-2 mb-1">
+                <CalendarClock className="w-3.5 h-3.5 text-on-surface-variant" />
+                <span className="text-[10px] uppercase tracking-widest text-on-surface-variant font-body">Remarcações ({apt.remarcacoes.length})</span>
+              </div>
+              {apt.remarcacoes.map((r, i) => (
+                <div key={i} className="text-xs text-on-surface font-body border-l-2 border-primary/30 pl-3 py-1">
+                  <p>
+                    <span className="line-through text-on-surface-variant">{new Date(r.deData + "T12:00:00").toLocaleDateString("pt-BR")} {r.deHora}</span>
+                    {" → "}
+                    <span className="font-semibold">{new Date(r.paraData + "T12:00:00").toLocaleDateString("pt-BR")} {r.paraHora}</span>
+                  </p>
+                  {r.motivo && <p className="text-[11px] text-on-surface-variant mt-0.5">Motivo: {r.motivo}</p>}
+                </div>
+              ))}
             </div>
           )}
 
@@ -148,7 +179,55 @@ export function SidePanel({ apt, onClose, onStatusChange }: {
             </div>
           )}
 
-          {apt.status !== "cancelado" && (
+          {apt.status === "agendado" && !mostrarRetorno && !mostrarRemarcar && (
+            <button onClick={() => setMostrarRemarcar(true)} className="w-full py-2.5 rounded-2xl bg-surface-high text-on-surface text-sm font-semibold font-body flex items-center justify-center gap-2 hover:bg-surface-highest transition-colors">
+              <CalendarClock className="w-4 h-4" />Remarcar
+            </button>
+          )}
+
+          {apt.status === "agendado" && mostrarRemarcar && (
+            <div className="space-y-3">
+              <div className="bg-surface-low rounded-2xl p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <CalendarClock className="w-4 h-4 text-primary" />
+                  <span className="text-xs font-semibold text-on-surface font-body">Remarcar agendamento</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="date"
+                    value={novaData}
+                    onChange={(e) => setNovaData(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl bg-surface-high text-on-surface text-sm font-body focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                  />
+                  <input
+                    type="time"
+                    value={novaHora}
+                    onChange={(e) => setNovaHora(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl bg-surface-high text-on-surface text-sm font-body focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                  />
+                </div>
+                <textarea
+                  value={motivoRemarcar}
+                  onChange={(e) => setMotivoRemarcar(e.target.value)}
+                  rows={2}
+                  placeholder="Motivo (opcional)"
+                  className="w-full px-3 py-2.5 rounded-xl bg-surface-high text-on-surface text-sm font-body placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all resize-none"
+                />
+              </div>
+              <button
+                onClick={handleRemarcar}
+                disabled={!novaData || !novaHora}
+                className="w-full py-3 rounded-2xl gradient-primary text-on-primary text-sm font-semibold font-body flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+              >
+                <Check className="w-4 h-4" />Confirmar Remarcação
+              </button>
+              <button onClick={() => { setMostrarRemarcar(false); setNovaData(""); setNovaHora(""); setMotivoRemarcar(""); }} className="w-full py-2 rounded-2xl text-on-surface-variant text-xs font-body hover:bg-surface-high transition-colors">
+                Voltar
+              </button>
+            </div>
+          )}
+
+          {apt.status !== "cancelado" && !mostrarRemarcar && (
             <button onClick={() => { onStatusChange(apt.id, "cancelado"); onClose(); }} className="w-full py-2.5 rounded-2xl bg-error-container/60 text-on-error-container text-sm font-semibold font-body flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
               <X className="w-4 h-4" />Cancelar Agendamento
             </button>

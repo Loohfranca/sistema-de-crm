@@ -6,6 +6,15 @@ import { addLog } from "./logs";
 
 export type StatusApt = "agendado" | "realizado" | "cancelado";
 
+export interface Remarcacao {
+  deData: string;       // "YYYY-MM-DD"
+  deHora: string;       // "HH:MM"
+  paraData: string;
+  paraHora: string;
+  motivo?: string;
+  em: string;           // ISO timestamp do registro
+}
+
 export interface Agendamento {
   id: number;
   cliente: string;
@@ -22,6 +31,7 @@ export interface Agendamento {
   retorno?: string;   // "YYYY-MM-DD" — data prevista para retorno
   cor: "rose" | "gold" | "teal";
   status: StatusApt;
+  remarcacoes?: Remarcacao[];
   // pagamento é gerenciado pelo módulo financeiro — o core só persiste o dado
   pagamento: Record<string, unknown> | null;
 }
@@ -59,6 +69,49 @@ export function atualizarAgendamento(id: number, patch: Partial<Omit<Agendamento
       descricao: `Editou agendamento de ${alvo.cliente} (${alvo.procedimento})`,
     });
   }
+  return atualizada;
+}
+
+export function remarcarAgendamento(
+  id: number,
+  paraData: string,
+  paraHora: number,
+  paraMinuto: number,
+  motivo?: string,
+): Agendamento[] {
+  const lista = getAgendamentos();
+  const alvo = lista.find((a) => a.id === id);
+  if (!alvo) return lista;
+
+  const horaStr = `${String(alvo.horaInicio).padStart(2, "0")}:${String(alvo.minutoInicio).padStart(2, "0")}`;
+  const novaHoraStr = `${String(paraHora).padStart(2, "0")}:${String(paraMinuto).padStart(2, "0")}`;
+  const novaEntry: Remarcacao = {
+    deData: alvo.data,
+    deHora: horaStr,
+    paraData,
+    paraHora: novaHoraStr,
+    motivo: motivo?.trim() || undefined,
+    em: new Date().toISOString(),
+  };
+
+  const atualizada = lista.map((a) =>
+    a.id === id
+      ? {
+          ...a,
+          data: paraData,
+          horaInicio: paraHora,
+          minutoInicio: paraMinuto,
+          remarcacoes: [...(a.remarcacoes ?? []), novaEntry],
+        }
+      : a,
+  );
+  salvarAgendamentos(atualizada);
+  addLog({
+    usuario: "Administrador",
+    acao: "Editou",
+    entidade: "agendamento",
+    descricao: `Remarcou ${alvo.cliente}: ${alvo.data} ${horaStr} → ${paraData} ${novaHoraStr}${motivo ? ` (${motivo})` : ""}`,
+  });
   return atualizada;
 }
 

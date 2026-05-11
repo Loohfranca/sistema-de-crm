@@ -157,8 +157,8 @@ export default function ClienteDetailPage() {
 
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
           <div className="flex items-center gap-4 md:gap-5">
-            <div className="w-20 h-20 rounded-3xl bg-primary-fixed-dim flex items-center justify-center shrink-0">
-              <span className="text-2xl font-bold text-on-primary-fixed font-display">{cliente.avatar}</span>
+            <div className="w-20 h-20 rounded-3xl bg-primary flex items-center justify-center shrink-0">
+              <span className="text-3xl font-bold text-on-primary font-display leading-none tracking-tight">{cliente.avatar}</span>
             </div>
             <div>
               <div className="flex items-center gap-3 flex-wrap">
@@ -308,6 +308,23 @@ export default function ClienteDetailPage() {
                         </p>
                         {apt.observacoes && (
                           <p className="text-xs text-outline font-body mt-2">{apt.observacoes}</p>
+                        )}
+                        {apt.remarcacoes && apt.remarcacoes.length > 0 && (
+                          <div className="mt-3 pt-3 border-t border-outline-variant/15 space-y-1.5">
+                            <p className="text-[10px] uppercase tracking-widest text-on-surface-variant font-body">
+                              Remarcado {apt.remarcacoes.length}x
+                            </p>
+                            {apt.remarcacoes.map((r, i) => (
+                              <div key={i} className="text-[11px] text-on-surface-variant font-body border-l-2 border-primary/30 pl-2">
+                                <p>
+                                  <span className="line-through opacity-60">{isoParaBR(r.deData)} {r.deHora}</span>
+                                  {" → "}
+                                  <span className="font-semibold text-on-surface">{isoParaBR(r.paraData)} {r.paraHora}</span>
+                                </p>
+                                {r.motivo && <p className="opacity-80 mt-0.5">Motivo: {r.motivo}</p>}
+                              </div>
+                            ))}
+                          </div>
                         )}
                       </div>
                     </div>
