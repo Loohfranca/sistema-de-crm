@@ -47,8 +47,8 @@ export default function ProfissionaisPage() {
 
   const filtered = search.trim()
     ? profissionais.filter((p) =>
-        p.nome.toLowerCase().includes(search.toLowerCase())
-      )
+      p.nome.toLowerCase().includes(search.toLowerCase())
+    )
     : profissionais;
 
   function toast(msg: string) {
@@ -150,11 +150,10 @@ export default function ProfissionaisPage() {
     <div className="space-y-6">
       {/* Toast */}
       <div
-        className={`fixed bottom-8 left-1/2 -translate-x-1/2 z-50 transition-all duration-500 ${
-          showToast
+        className={`fixed bottom-8 left-1/2 -translate-x-1/2 z-50 transition-all duration-500 ${showToast
             ? "translate-y-0 opacity-100"
             : "translate-y-4 opacity-0 pointer-events-none"
-        }`}
+          }`}
       >
         <div className="bg-surface-high text-on-surface flex items-center gap-2 px-5 py-3 rounded-full shadow-lg font-body text-sm font-semibold border border-outline-variant/30">
           <CheckCircle2 className="w-5 h-5 text-[#25D366]" />
@@ -261,11 +260,10 @@ export default function ProfissionaisPage() {
                   </td>
                   <td className="px-6 py-4 hidden sm:table-cell">
                     <span
-                      className={`inline-block px-3 py-1 rounded-full text-xs font-semibold font-body ${
-                        p.ativo
+                      className={`inline-block px-3 py-1 rounded-full text-xs font-semibold font-body ${p.ativo
                           ? "bg-[#059669]/12 text-[#059669]"
                           : "bg-surface-high text-on-surface-variant"
-                      }`}
+                        }`}
                     >
                       {p.ativo ? "Ativo" : "Inativo"}
                     </span>
@@ -281,11 +279,10 @@ export default function ProfissionaisPage() {
                       </button>
                       <button
                         onClick={() => handleToggle(p)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold font-body transition-colors ${
-                          p.ativo
+                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold font-body transition-colors ${p.ativo
                             ? "text-error hover:bg-error/10"
                             : "text-[#059669] hover:bg-[#059669]/10"
-                        }`}
+                          }`}
                       >
                         {p.ativo ? "Desativar" : "Ativar"}
                       </button>
@@ -384,11 +381,10 @@ export default function ProfissionaisPage() {
                           key={dia}
                           type="button"
                           onClick={() => toggleDia(dia)}
-                          className={`px-3.5 py-2 rounded-xl text-xs font-semibold font-body transition-all ${
-                            form.diasAtendimento.includes(dia)
+                          className={`px-3.5 py-2 rounded-xl text-xs font-semibold font-body transition-all ${form.diasAtendimento.includes(dia)
                               ? "gradient-primary text-on-primary shadow-sm"
                               : "bg-surface-high text-on-surface-variant hover:bg-surface-container"
-                          }`}
+                            }`}
                         >
                           {dia}
                         </button>

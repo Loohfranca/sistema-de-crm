@@ -17,7 +17,10 @@ const PADRAO = [
   "Corporal",
 ];
 
-export function getCategorias(): string[] {
+let cache: string[] | null = null;
+const SERVER_SNAPSHOT: string[] = PADRAO;
+
+function readStorage(): string[] {
   if (typeof window === "undefined") return PADRAO;
   const raw = localStorage.getItem(KEY);
   if (!raw) {
@@ -31,10 +34,27 @@ export function getCategorias(): string[] {
   }
 }
 
+export function getCategorias(): string[] {
+  if (typeof window === "undefined") return SERVER_SNAPSHOT;
+  if (cache === null) cache = readStorage();
+  return cache;
+}
+
 function salvar(lista: string[]): void {
   if (typeof window === "undefined") return;
   localStorage.setItem(KEY, JSON.stringify(lista));
+  cache = lista;
   window.dispatchEvent(new Event(EVENT));
+}
+
+export function subscribeCategorias(cb: () => void): () => void {
+  if (typeof window === "undefined") return () => {};
+  window.addEventListener(EVENT, cb);
+  return () => window.removeEventListener(EVENT, cb);
+}
+
+export function getCategoriasServerSnapshot(): string[] {
+  return SERVER_SNAPSHOT;
 }
 
 export function adicionarCategoria(nome: string): string[] {

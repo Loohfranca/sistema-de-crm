@@ -23,14 +23,27 @@ const CORES_AVATAR = [
 let cache: Profissional[] | null = null;
 const EMPTY: Profissional[] = [];
 
+function buildInitialProfissionais(): Profissional[] {
+  return [
+    { id: 1, nome: "Dra. Helena Costa", avatar: "DH", especialidade: "Esteticista", diasAtendimento: ["Seg", "Ter", "Qua", "Qui", "Sex"], ativo: true, cor: CORES_AVATAR[0] },
+    { id: 2, nome: "Fernanda Lima", avatar: "FL", especialidade: "Massoterapeuta", diasAtendimento: ["Seg", "Ter", "Qua"], ativo: true, cor: CORES_AVATAR[1] },
+    { id: 3, nome: "Roberta Pereira", avatar: "RP", especialidade: "Dermatologista", diasAtendimento: ["Seg", "Ter", "Qui", "Sex"], ativo: true, cor: CORES_AVATAR[2] },
+    { id: 4, nome: "Rafaela Lopes", avatar: "RL", especialidade: "Nutricionista", diasAtendimento: ["Qui", "Sex", "Sáb"], ativo: true, cor: CORES_AVATAR[3] },
+  ];
+}
+
 function readStorage(): Profissional[] {
   if (typeof window === "undefined") return EMPTY;
   const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) return EMPTY;
+  if (!raw) {
+    const dados = buildInitialProfissionais();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(dados));
+    return dados;
+  }
   try {
     return JSON.parse(raw) as Profissional[];
   } catch {
-    return EMPTY;
+    return buildInitialProfissionais();
   }
 }
 
@@ -48,7 +61,7 @@ export function salvarProfissionais(dados: Profissional[]): void {
 }
 
 export function subscribeProfissionais(cb: () => void): () => void {
-  if (typeof window === "undefined") return () => {};
+  if (typeof window === "undefined") return () => { };
   window.addEventListener(EVENT, cb);
   return () => window.removeEventListener(EVENT, cb);
 }

@@ -26,10 +26,12 @@ export function ProcedimentoModal({
   servico,
   categoriaPreset,
   onClose,
+  onSaved,
 }: {
   servico: Servico | null;
   categoriaPreset?: string | null;
   onClose: () => void;
+  onSaved?: (categoria: string) => void;
 }) {
   const isEdit = !!servico;
 
@@ -73,6 +75,7 @@ export function ProcedimentoModal({
         categoria: categoria || undefined,
       });
     }
+    onSaved?.(categoria);
     onClose();
   }
 

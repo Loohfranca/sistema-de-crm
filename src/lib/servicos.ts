@@ -18,7 +18,33 @@ export function getServicos(): Servico[] {
     return SERVICOS_PADRAO;
   }
   try {
-    return JSON.parse(raw) as Servico[];
+    const parsed = JSON.parse(raw) as Servico[];
+
+    // ─── Migração: preencher `categoria` ausente em dados antigos ─────
+    let dirty = false;
+    const reparado = parsed.map((s) => {
+      if (!s.categoria) {
+        const padrao = SERVICOS_PADRAO.find((p) => p.id === s.id);
+        if (padrao?.categoria) {
+          dirty = true;
+          return { ...s, categoria: padrao.categoria };
+        }
+        // Tenta inferir por nome
+        const porNome = SERVICOS_PADRAO.find(
+          (p) => p.nome.toLowerCase() === s.nome.toLowerCase(),
+        );
+        if (porNome?.categoria) {
+          dirty = true;
+          return { ...s, categoria: porNome.categoria };
+        }
+      }
+      return s;
+    });
+    if (dirty) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(reparado));
+    }
+
+    return reparado;
   } catch {
     return SERVICOS_PADRAO;
   }

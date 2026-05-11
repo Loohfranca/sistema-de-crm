@@ -54,11 +54,14 @@ export function ProcedimentoCard({
   const margemPct = servico.preco > 0 ? ((servico.preco - custo) / servico.preco) * 100 : 0;
 
   return (
-    <motion.button
+    <motion.div
+      role="button"
+      tabIndex={0}
       onClick={onEdit}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onEdit(); }}
       whileHover={{ y: -2 }}
       transition={{ duration: 0.2, ease: EASE_OUT_EXPO }}
-      className="group relative text-left w-full bg-surface-lowest rounded-3xl p-6 shadow-ambient hover:shadow-lg transition-shadow"
+      className="group relative text-left w-full bg-surface-lowest rounded-3xl p-6 shadow-ambient hover:shadow-lg transition-shadow cursor-pointer"
     >
       {/* Menu ⋮ */}
       <div ref={menuRef} className="absolute top-4 right-4">
@@ -157,6 +160,6 @@ export function ProcedimentoCard({
           )}
         </div>
       </div>
-    </motion.button>
+    </motion.div>
   );
 }

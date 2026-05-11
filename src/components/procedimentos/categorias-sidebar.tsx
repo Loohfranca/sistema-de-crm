@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { motion } from "motion/react";
 import { Plus, X, Trash2 } from "lucide-react";
 import {
   adicionarCategoria,
   getCategorias,
   removerCategoria,
+  subscribeCategorias,
+  getCategoriasServerSnapshot,
 } from "@/lib/categorias";
 import { EASE_OUT_EXPO } from "@/lib/motion";
 import type { Servico } from "@/types/servico";
@@ -20,28 +22,28 @@ export function CategoriasSidebar({
   ativa: string | null;
   onChange: (cat: string | null) => void;
 }) {
-  const [categorias, setCategorias] = useState<string[]>([]);
+  const categorias = useSyncExternalStore(
+    subscribeCategorias,
+    getCategorias,
+    getCategoriasServerSnapshot,
+  );
   const [adicionando, setAdicionando] = useState(false);
   const [nova, setNova] = useState("");
 
-  useEffect(() => {
-    setCategorias(getCategorias());
-    const sync = () => setCategorias(getCategorias());
-    window.addEventListener("crm_categorias_updated", sync);
-    return () => window.removeEventListener("crm_categorias_updated", sync);
-  }, []);
-
   function contar(cat: string | null): number {
     if (cat === null) return servicos.length;
+    if (cat === "") return servicos.filter((s) => !s.categoria).length;
     return servicos.filter((s) => s.categoria === cat).length;
   }
+
+  const semCategoriaCount = servicos.filter((s) => !s.categoria).length;
 
   function handleAdicionar() {
     if (!nova.trim()) {
       setAdicionando(false);
       return;
     }
-    setCategorias(adicionarCategoria(nova));
+    adicionarCategoria(nova);
     setNova("");
     setAdicionando(false);
   }
@@ -56,15 +58,14 @@ export function CategoriasSidebar({
       )
         return;
     }
-    setCategorias(removerCategoria(cat));
+    removerCategoria(cat);
     if (ativa === cat) onChange(null);
   }
 
   const itemCls = (isAtiva: boolean) =>
-    `group w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-2xl text-sm font-body transition-colors ${
-      isAtiva
-        ? "bg-primary/10 text-primary font-semibold"
-        : "text-on-surface-variant hover:bg-surface-high"
+    `group w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-2xl text-sm font-body transition-colors ${isAtiva
+      ? "bg-primary/10 text-primary font-semibold"
+      : "text-on-surface-variant hover:bg-surface-high"
     }`;
 
   return (
@@ -81,6 +82,18 @@ export function CategoriasSidebar({
           {contar(null)}
         </span>
       </button>
+
+      {semCategoriaCount > 0 && (
+        <button
+          onClick={() => onChange("")}
+          className={itemCls(ativa === "")}
+        >
+          <span className="italic">Sem categoria</span>
+          <span className="text-[11px] text-on-surface-variant font-body">
+            {semCategoriaCount}
+          </span>
+        </button>
+      )}
 
       {categorias.map((cat) => {
         const count = contar(cat);

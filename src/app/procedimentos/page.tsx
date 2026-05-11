@@ -31,7 +31,8 @@ export default function ProcedimentosPage() {
   const filtrados = useMemo(() => {
     const termo = busca.trim().toLowerCase();
     return servicos.filter((s) => {
-      if (categoriaAtiva !== null && s.categoria !== categoriaAtiva) return false;
+      const cat = s.categoria || "";
+      if (categoriaAtiva !== null && cat !== categoriaAtiva) return false;
       if (termo && !s.nome.toLowerCase().includes(termo)) return false;
       return true;
     });
@@ -122,6 +123,7 @@ export default function ProcedimentosPage() {
             </motion.div>
           ) : (
             <motion.div
+              key={`${categoriaAtiva ?? "all"}-${busca}`}
               initial="hidden"
               animate="visible"
               variants={{
@@ -157,6 +159,12 @@ export default function ProcedimentosPage() {
           <ProcedimentoModal
             servico={editando}
             categoriaPreset={criando ? categoriaAtiva : null}
+            onSaved={(cat) => {
+              if (categoriaAtiva !== null && categoriaAtiva !== cat) {
+                setCategoriaAtiva(cat);
+              }
+            }}
+
             onClose={() => {
               setCriando(false);
               setEditando(null);
