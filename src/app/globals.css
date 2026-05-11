@@ -107,10 +107,10 @@
   --primary: #1a1a1a;
   --primary-container: #e5e7eb;
   --primary-fixed: #f3f4f6;
-  --primary-fixed-dim: #404040;
+  --primary-fixed-dim: #1a1a1a;
   --on-primary: #ffffff;
   --on-primary-container: #0a0a0a;
-  --on-primary-fixed: #0a0a0a;
+  --on-primary-fixed: #ffffff;
   --secondary: #2563eb;
   --secondary-container: #dbeafe;
   --secondary-fixed: #eff6ff;
