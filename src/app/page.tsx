@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Users, Calendar, Clock, CheckCircle2,
   ChevronRight, MessageCircle, Phone, XCircle,
@@ -12,22 +12,46 @@ import {
   isoParaBR,
   type Agendamento,
 } from "@/lib/store";
+import { getClientes, type Cliente } from "@/lib/clientes";
 import { statusConfig, endTime } from "@/lib/agenda-config";
 import { AlertasEstoque } from "@/components/dashboard/alertas-estoque";
 import { LembretesProximos } from "@/components/dashboard/lembretes-proximos";
 
 // ─── Birthday helpers ─────────────────────────────────────────────────────────
-function daysFromNow(n: number) {
-  const d = new Date(); d.setDate(d.getDate() + n);
-  return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}`;
+function daysUntilBirthday(birthDate: string): number | null {
+  if (!birthDate) return null;
+  const [, m, d] = birthDate.split("-").map(Number);
+  if (!m || !d) return null;
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  const ano = hoje.getFullYear();
+  let prox = new Date(ano, m - 1, d);
+  if (prox < hoje) prox = new Date(ano + 1, m - 1, d);
+  return Math.round((prox.getTime() - hoje.getTime()) / 86400000);
 }
 
-const birthdayClients = [
-  { name: "Marina Silva",    phone: "5511987654321", birthday: daysFromNow(0), isToday: true  },
-  { name: "Cláudia Nunes",   phone: "5541998765678", birthday: daysFromNow(1), isToday: false },
-  { name: "Fernanda Costa",  phone: "5521998765432", birthday: daysFromNow(3), isToday: false },
-  { name: "Ana Beatriz",     phone: "5521987651234", birthday: daysFromNow(5), isToday: false },
-];
+function birthdayLabel(birthDate: string): string {
+  const [, m, d] = birthDate.split("-");
+  return `${d}/${m}`;
+}
+
+function deriveBirthdays(clientes: Cliente[]) {
+  return clientes
+    .map((c) => {
+      const dias = daysUntilBirthday(c.birthDate);
+      if (dias === null || dias > 30) return null;
+      return {
+        name: c.name,
+        phone: c.phone?.replace(/\D/g, "") ?? "",
+        birthday: birthdayLabel(c.birthDate),
+        isToday: dias === 0,
+        dias,
+      };
+    })
+    .filter((b): b is NonNullable<typeof b> => b !== null)
+    .sort((a, b) => a.dias - b.dias)
+    .slice(0, 6);
+}
 
 function waMsg(name: string) {
   const first = name.split(" ")[0];
@@ -92,14 +116,23 @@ function greeting(): string {
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 export default function Dashboard() {
   const [lista, setLista] = useState<Agendamento[]>([]);
+  const [clientes, setClientes] = useState<Cliente[]>([]);
 
   const carregar = useCallback(() => setLista(getAgendamentos()), []);
+  const carregarClientes = useCallback(() => setClientes(getClientes()), []);
 
   useEffect(() => {
     carregar();
+    carregarClientes();
     window.addEventListener("crm_agenda_updated", carregar);
-    return () => window.removeEventListener("crm_agenda_updated", carregar);
-  }, [carregar]);
+    window.addEventListener("crm_clientes_updated", carregarClientes);
+    return () => {
+      window.removeEventListener("crm_agenda_updated", carregar);
+      window.removeEventListener("crm_clientes_updated", carregarClientes);
+    };
+  }, [carregar, carregarClientes]);
+
+  const birthdayClients = useMemo(() => deriveBirthdays(clientes), [clientes]);
 
   const agendados  = lista.filter((a) => a.status === "agendado").length;
   const realizados = lista.filter((a) => a.status === "realizado").length;
@@ -655,9 +688,14 @@ export default function Dashboard() {
         <div className="bg-surface-lowest rounded-2xl shadow-ambient overflow-hidden">
           <div className="px-5 py-4 border-b border-outline-variant/15">
             <h2 className="font-display text-sm font-bold text-on-surface">Próximos aniversariantes</h2>
-            <p className="text-[11px] text-on-surface-variant font-body mt-0.5">Esta semana</p>
+            <p className="text-[11px] text-on-surface-variant font-body mt-0.5">Próximos 30 dias</p>
           </div>
           <div className="divide-y divide-outline-variant/10">
+            {birthdayClients.length === 0 && (
+              <p className="px-5 py-6 text-xs text-on-surface-variant font-body text-center">
+                Nenhum aniversariante nos próximos 30 dias
+              </p>
+            )}
             {birthdayClients.map((b) => (
               <div key={b.name} className="px-5 py-3 flex items-center gap-3 hover:bg-surface-low transition-colors group">
                 <span className={`text-[11px] font-bold font-display tabular-nums shrink-0 w-10 ${b.isToday ? "text-primary" : "text-on-surface-variant"}`}>

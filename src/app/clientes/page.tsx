@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import {
   Search, Plus, ChevronRight, Phone, Mail,
@@ -10,8 +10,24 @@ import {
   getClientes, adicionarCliente, atualizarCliente, excluirCliente,
   type Cliente as Client,
 } from "@/lib/clientes";
+import { getAgendamentos, isoParaBR, type Agendamento } from "@/lib/store";
 import { ClienteFormModal } from "@/components/clientes/cliente-form-modal";
 import { ConfirmarExclusao } from "@/components/clientes/confirmar-exclusao";
+
+function deriveStats(nome: string, agendamentos: Agendamento[]) {
+  const alvo = nome.trim().toLowerCase();
+  const meus = agendamentos.filter((a) => a.cliente.trim().toLowerCase() === alvo);
+  const realizados = meus.filter((a) => a.status === "realizado");
+  const ultima = realizados.sort((a, b) => b.data.localeCompare(a.data))[0];
+  const tier =
+    realizados.length >= 30 ? "diamond" :
+    realizados.length >= 10 ? "gold" : "silver";
+  return {
+    procedures: realizados.length,
+    lastVisit: ultima ? isoParaBR(ultima.data) : null,
+    tier,
+  };
+}
 
 function getTierBadge(tier: string) {
   switch (tier) {
@@ -40,18 +56,33 @@ export default function ClientesPage() {
   const [search, setSearch] = useState("");
   const [filterTier, setFilterTier] = useState("all");
   const [clientList, setClientList] = useState<Client[]>([]);
+  const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [modalCriar, setModalCriar] = useState(false);
   const [modalEditar, setModalEditar] = useState<Client | null>(null);
   const [modalExcluir, setModalExcluir] = useState<Client | null>(null);
 
   useEffect(() => {
     setClientList(getClientes());
-    const sync = () => setClientList(getClientes());
-    window.addEventListener("crm_clientes_updated", sync);
-    return () => window.removeEventListener("crm_clientes_updated", sync);
+    setAgendamentos(getAgendamentos());
+    const syncC = () => setClientList(getClientes());
+    const syncA = () => setAgendamentos(getAgendamentos());
+    window.addEventListener("crm_clientes_updated", syncC);
+    window.addEventListener("crm_agenda_updated", syncA);
+    return () => {
+      window.removeEventListener("crm_clientes_updated", syncC);
+      window.removeEventListener("crm_agenda_updated", syncA);
+    };
   }, []);
 
-  const filtered = clientList.filter((c) => {
+  const enriched = useMemo(
+    () => clientList.map((c) => {
+      const stats = deriveStats(c.name, agendamentos);
+      return { ...c, ...stats, lastVisit: stats.lastVisit ?? "—" };
+    }),
+    [clientList, agendamentos]
+  );
+
+  const filtered = enriched.filter((c) => {
     const matchSearch =
       c.name.toLowerCase().includes(search.toLowerCase()) ||
       c.email.toLowerCase().includes(search.toLowerCase());

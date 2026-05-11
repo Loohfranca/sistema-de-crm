@@ -80,6 +80,17 @@ export default function ClienteDetailPage() {
     .filter((a) => a.status === "agendado" && a.data >= new Date().toISOString().slice(0, 10))
     .sort((a, b) => a.data.localeCompare(b.data) || a.horaInicio - b.horaInicio)[0];
 
+  const ultimaVisitaDerivada = realizados[0]?.data
+    ? isoParaBR(realizados[0].data)
+    : cliente?.lastVisit && cliente.lastVisit !== "-"
+    ? cliente.lastVisit
+    : null;
+
+  const tierDerivado =
+    realizados.length >= 30 ? "diamond" :
+    realizados.length >= 10 ? "gold" :
+    cliente?.tier || "silver";
+
   const idade = cliente ? calcAge(cliente.birthDate) : null;
 
   if (!cliente) {
@@ -101,7 +112,7 @@ export default function ClienteDetailPage() {
     );
   }
 
-  const tier = tierInfo(cliente.tier);
+  const tier = tierInfo(tierDerivado);
   const TierIcon = tier.Icon;
 
   function handleEditarSave(updated: Cliente) {
@@ -160,7 +171,7 @@ export default function ClienteDetailPage() {
               </div>
               <p className="text-on-surface-variant font-body mt-1">
                 {idade !== null ? `${idade} anos` : "Idade não informada"}
-                {cliente.lastVisit && cliente.lastVisit !== "-" && ` • Última visita: ${cliente.lastVisit}`}
+                {ultimaVisitaDerivada && ` • Última visita: ${ultimaVisitaDerivada}`}
               </p>
               <div className="flex items-center gap-4 mt-2 flex-wrap">
                 {cliente.phone && (
@@ -226,7 +237,7 @@ export default function ClienteDetailPage() {
             </div>
           </div>
           <p className="font-display text-xl font-bold text-on-surface">
-            {cliente.lastVisit && cliente.lastVisit !== "-" ? cliente.lastVisit : "—"}
+            {ultimaVisitaDerivada ?? "—"}
           </p>
           <p className="text-xs text-on-surface-variant font-body mt-0.5">Última visita</p>
         </div>
@@ -237,7 +248,7 @@ export default function ClienteDetailPage() {
             </div>
           </div>
           <p className="font-display text-xl font-bold text-on-surface capitalize">
-            {cliente.tier === "diamond" ? "Diamante" : cliente.tier === "gold" ? "Ouro" : "Prata"}
+            {tierDerivado === "diamond" ? "Diamante" : tierDerivado === "gold" ? "Ouro" : "Prata"}
           </p>
           <p className="text-xs text-on-surface-variant font-body mt-0.5">Categoria</p>
         </div>
