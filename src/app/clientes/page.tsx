@@ -13,6 +13,7 @@ import {
 import { getAgendamentos, isoParaBR, type Agendamento } from "@/lib/store";
 import { ClienteFormModal } from "@/components/clientes/cliente-form-modal";
 import { ConfirmarExclusao } from "@/components/clientes/confirmar-exclusao";
+import { AniversariosSemana } from "@/components/clientes/aniversarios-semana";
 
 function deriveStats(nome: string, agendamentos: Agendamento[]) {
   const alvo = nome.trim().toLowerCase();
@@ -150,6 +151,8 @@ export default function ClientesPage() {
           Nova Cliente
         </button>
       </div>
+
+      <AniversariosSemana />
 
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
         <div className="flex-1 relative">
