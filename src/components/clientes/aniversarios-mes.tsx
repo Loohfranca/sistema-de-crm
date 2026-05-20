@@ -5,25 +5,12 @@ import { Cake, MessageCircle, Gift } from "lucide-react";
 import { getClientes, type Cliente } from "@/lib/clientes";
 import { gerarLinkWhatsApp } from "@/lib/whatsapp";
 
+const MESES = [
+  "janeiro", "fevereiro", "março", "abril", "maio", "junho",
+  "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
+];
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-// Dias até o próximo aniversário (0 = hoje). null se data inválida.
-function diasAteAniversario(birthDate: string): number | null {
-  if (!birthDate) return null;
-  const [, m, d] = birthDate.split("-").map(Number);
-  if (!m || !d) return null;
-  const hoje = new Date();
-  hoje.setHours(0, 0, 0, 0);
-  const ano = hoje.getFullYear();
-  let prox = new Date(ano, m - 1, d);
-  if (prox < hoje) prox = new Date(ano + 1, m - 1, d);
-  return Math.round((prox.getTime() - hoje.getTime()) / 86400000);
-}
-
-function dataCurta(birthDate: string): string {
-  const [, m, d] = birthDate.split("-");
-  return `${d}/${m}`;
-}
-
 function getClinicaNome(): string {
   if (typeof window === "undefined") return "";
   try {
@@ -47,12 +34,14 @@ interface Aniversariante {
   name: string;
   avatar: string;
   phone: string;
-  data: string;
-  dias: number;
+  dia: number;
+  mes: number;
+  estado: "hoje" | "proximo" | "passou";
+  dias: number; // dias até (só quando próximo)
 }
 
 // ─── Componente ──────────────────────────────────────────────────────────────
-export function AniversariosSemana() {
+export function AniversariosMes() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [montado, setMontado] = useState(false);
 
@@ -64,82 +53,100 @@ export function AniversariosSemana() {
     return () => window.removeEventListener("crm_clientes_updated", carregar);
   }, []);
 
-  // Aniversariantes nos próximos 7 dias (incluindo hoje)
+  const hoje = new Date();
+  const mesAtual = hoje.getMonth(); // 0-11
+  const diaHoje = hoje.getDate();
+
+  // Aniversariantes do mês corrente
   const lista = useMemo<Aniversariante[]>(() => {
     return clientes
       .map((c) => {
-        const dias = diasAteAniversario(c.birthDate);
-        if (dias === null || dias > 7) return null;
+        if (!c.birthDate) return null;
+        const [, m, d] = c.birthDate.split("-").map(Number);
+        if (!m || !d || m - 1 !== mesAtual) return null;
+        const estado: Aniversariante["estado"] =
+          d === diaHoje ? "hoje" : d > diaHoje ? "proximo" : "passou";
         return {
           id: c.id,
           name: c.name,
           avatar: c.avatar,
           phone: c.phone?.replace(/\D/g, "") ?? "",
-          data: dataCurta(c.birthDate),
-          dias,
+          dia: d,
+          mes: m,
+          estado,
+          dias: d - diaHoje,
         };
       })
       .filter((a): a is Aniversariante => a !== null)
-      .sort((a, b) => a.dias - b.dias);
-  }, [clientes]);
+      .sort((a, b) => a.dia - b.dia);
+  }, [clientes, mesAtual, diaHoje]);
 
   if (!montado) return null;
 
+  const nomeMes = MESES[mesAtual];
+
   return (
-    <div className="bg-surface-lowest rounded-3xl shadow-ambient overflow-hidden">
-      <div className="px-6 py-4 flex items-center justify-between gap-3 bg-primary-fixed/30 border-b border-outline-variant/15">
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center shadow-sm">
-            <Cake className="w-4 h-4 text-on-primary" />
-          </div>
-          <div>
-            <h2 className="font-display text-sm font-bold text-on-surface">
-              Aniversários da semana
-            </h2>
-            <p className="text-[11px] text-on-surface-variant font-body">
-              {lista.length === 0
-                ? "Próximos 7 dias"
-                : `${lista.length} cliente${lista.length !== 1 ? "s" : ""} nos próximos 7 dias`}
-            </p>
-          </div>
+    <section>
+      {/* Título destacado — fora do card */}
+      <div className="flex items-center gap-3 mb-3">
+        <div className="w-12 h-12 rounded-2xl gradient-primary flex items-center justify-center shadow-sm shrink-0">
+          <Cake className="w-5 h-5 text-on-primary" />
         </div>
-        <span className="shrink-0 font-display text-2xl font-bold text-primary tabular-nums">
-          {lista.length}
-        </span>
+        <div>
+          <h2 className="font-display text-xl font-bold text-on-surface">
+            Aniversariantes do mês
+          </h2>
+          <p className="text-xs text-on-surface-variant font-body mt-0.5 capitalize">
+            {nomeMes} ·{" "}
+            <span className="text-on-surface font-semibold">
+              {lista.length} cliente{lista.length !== 1 ? "s" : ""}
+            </span>
+          </p>
+        </div>
       </div>
 
+      {/* Card — só a lista */}
       {lista.length === 0 ? (
-        <div className="px-6 py-8 text-center">
+        <div className="bg-surface-lowest rounded-3xl shadow-ambient px-6 py-8 text-center">
           <Gift className="w-7 h-7 text-outline mx-auto mb-2" />
           <p className="text-sm font-body text-on-surface-variant">
-            Nenhuma aniversariante nesta semana.
+            Nenhuma aniversariante em {nomeMes}.
           </p>
         </div>
       ) : (
-        <div className="divide-y divide-outline-variant/10">
+        <div className="bg-surface-lowest rounded-3xl shadow-ambient overflow-hidden divide-y divide-outline-variant/10">
           {lista.map((a) => (
             <div
               key={a.id}
-              className={`flex items-center gap-3 px-6 py-3 transition-colors ${
-                a.dias === 0 ? "bg-primary/5" : "hover:bg-surface-low/50"
+              className={`flex items-center gap-3 px-6 py-3.5 transition-colors ${
+                a.estado === "hoje" ? "bg-primary/5" : "hover:bg-surface-low/50"
               }`}
             >
-              <div className="w-9 h-9 shrink-0 rounded-full gradient-primary flex items-center justify-center text-on-primary font-display font-bold text-[11px]">
+              <div className="w-10 h-10 shrink-0 rounded-full gradient-primary flex items-center justify-center text-on-primary font-display font-bold text-xs">
                 {a.avatar}
               </div>
               <div className="flex-1 min-w-0">
+                {/* nome = título do item */}
                 <p className="text-sm font-bold text-on-surface font-body truncate">
                   {a.name}
                 </p>
-                <p className="text-[11px] text-on-surface-variant font-body">
-                  {a.dias === 0 ? (
+                {/* data = texto secundário */}
+                <p className="text-[11px] font-body">
+                  {a.estado === "hoje" ? (
                     <span className="text-primary font-semibold">
                       🎂 Aniversário hoje!
                     </span>
+                  ) : a.estado === "proximo" ? (
+                    <span className="text-on-surface-variant">
+                      Dia {String(a.dia).padStart(2, "0")}/
+                      {String(a.mes).padStart(2, "0")} · em {a.dias} dia
+                      {a.dias !== 1 ? "s" : ""}
+                    </span>
                   ) : (
-                    <>
-                      {a.data} · em {a.dias} dia{a.dias !== 1 ? "s" : ""}
-                    </>
+                    <span className="text-on-surface-variant">
+                      Dia {String(a.dia).padStart(2, "0")}/
+                      {String(a.mes).padStart(2, "0")}
+                    </span>
                   )}
                 </p>
               </div>
@@ -163,6 +170,6 @@ export function AniversariosSemana() {
           ))}
         </div>
       )}
-    </div>
+    </section>
   );
 }

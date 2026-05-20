@@ -13,7 +13,7 @@ import {
 import { getAgendamentos, isoParaBR, type Agendamento } from "@/lib/store";
 import { ClienteFormModal } from "@/components/clientes/cliente-form-modal";
 import { ConfirmarExclusao } from "@/components/clientes/confirmar-exclusao";
-import { AniversariosSemana } from "@/components/clientes/aniversarios-semana";
+import { AniversariosMes } from "@/components/clientes/aniversarios-mes";
 import { AnamnesesLista } from "@/components/clientes/anamneses-lista";
 
 function deriveStats(nome: string, agendamentos: Agendamento[]) {
@@ -178,7 +178,7 @@ export default function ClientesPage() {
         <AnamnesesLista />
       ) : (
         <>
-      <AniversariosSemana />
+      <AniversariosMes />
 
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
         <div className="flex-1 relative">
@@ -208,18 +208,18 @@ export default function ClientesPage() {
       </div>
 
       <div className="bg-surface-lowest rounded-3xl shadow-ambient overflow-hidden">
-        <div className="grid grid-cols-[2fr_1fr_1fr_1fr_auto] gap-4 px-6 py-4 bg-surface-low">
+        <div className="grid grid-cols-[2fr_1fr_1fr_1fr_184px] gap-4 px-6 py-4 bg-surface-low">
           <span className="text-xs font-semibold text-on-surface-variant font-body uppercase tracking-wider">Cliente</span>
           <span className="text-xs font-semibold text-on-surface-variant font-body uppercase tracking-wider">Categoria</span>
           <span className="text-xs font-semibold text-on-surface-variant font-body uppercase tracking-wider">Procedimentos</span>
           <span className="text-xs font-semibold text-on-surface-variant font-body uppercase tracking-wider">Última Visita</span>
-          <span className="text-xs font-semibold text-on-surface-variant font-body uppercase tracking-wider">Ações</span>
+          <span className="text-xs font-semibold text-on-surface-variant font-body uppercase tracking-wider text-center">Ações</span>
         </div>
         <div className="divide-y divide-outline-variant/10">
           {filtered.map((client) => (
             <div
               key={client.id}
-              className="grid grid-cols-[2fr_1fr_1fr_1fr_auto] gap-4 px-6 py-4 items-center hover:bg-surface-low transition-colors group"
+              className="grid grid-cols-[2fr_1fr_1fr_1fr_184px] gap-4 px-6 py-4 items-center hover:bg-surface-low transition-colors group"
             >
               <Link href={`/clientes/${client.id}`} className="flex items-center gap-3 min-w-0">
                 <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center shrink-0">
@@ -233,7 +233,7 @@ export default function ClientesPage() {
               <div>{getTierBadge(client.tier)}</div>
               <p className="text-sm text-on-surface-variant font-body">{client.procedures} sessões</p>
               <p className="text-sm text-on-surface-variant font-body">{client.lastVisit}</p>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 justify-center">
                 {client.phone && (
                   <a
                     href={`https://wa.me/${client.phone.replace(/\D/g, "")}`}
