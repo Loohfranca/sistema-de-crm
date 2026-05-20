@@ -13,7 +13,10 @@ export function LayoutShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [collapsed] = useSidebarCollapsed();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const isBareRoute = pathname?.startsWith("/financeiro/relatorio") ?? false;
+  const isBareRoute =
+    (pathname?.startsWith("/financeiro/relatorio") ||
+      pathname?.startsWith("/agendar")) ??
+    false;
 
   // Fecha drawer ao navegar (mobile)
   useEffect(() => {
@@ -21,7 +24,7 @@ export function LayoutShell({ children }: { children: React.ReactNode }) {
   }, [pathname]);
 
   if (isBareRoute) {
-    return <main className="min-h-screen">{children}</main>;
+    return <main className="min-h-screen flex-1 w-full">{children}</main>;
   }
 
   return (

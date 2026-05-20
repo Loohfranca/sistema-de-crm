@@ -21,6 +21,7 @@ import {
   ScrollText,
   Stethoscope,
   FileText,
+  Share2,
 } from "lucide-react";
 import { useSidebarCollapsed } from "@/lib/sidebar-state";
 import { EASE_OUT_EXPO } from "@/lib/motion";
@@ -32,6 +33,7 @@ const menuNavigation = [
   { name: "Clientes", href: "/clientes", icon: Users },
   { name: "Agenda", href: "/agenda", icon: Calendar },
   { name: "Atendimentos", href: "/atendimentos", icon: CalendarPlus },
+  { name: "Link de Agendamento", href: "/link-agendamento", icon: Share2 },
   { name: "Procedimentos", href: "/procedimentos", icon: Sparkles },
   { name: "Financeiro", href: "/financeiro", icon: BarChart3 },
   { name: "Estoque", href: "/estoque", icon: Package },
