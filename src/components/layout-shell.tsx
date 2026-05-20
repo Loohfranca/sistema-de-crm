@@ -13,10 +13,7 @@ export function LayoutShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [collapsed] = useSidebarCollapsed();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const isBareRoute =
-    (pathname?.startsWith("/financeiro/relatorio") ||
-      pathname?.startsWith("/agendar")) ??
-    false;
+  const isBareRoute = pathname?.startsWith("/agendar") ?? false;
 
   // Fecha drawer ao navegar (mobile)
   useEffect(() => {

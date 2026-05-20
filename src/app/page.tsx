@@ -413,7 +413,7 @@ export default function Dashboard() {
                   </div>
                   <p className="text-[10px] font-semibold text-on-surface-variant font-body uppercase tracking-widest">Faturamento do dia</p>
                 </div>
-                <Link href="/financeiro" className="text-[10px] text-primary font-semibold font-body hover:opacity-80 transition-opacity">
+                <Link href="/gestao" className="text-[10px] text-primary font-semibold font-body hover:opacity-80 transition-opacity">
                   Ver
                 </Link>
               </div>
