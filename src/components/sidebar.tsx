@@ -34,7 +34,6 @@ const menuNavigation = [
   { name: "Clientes", href: "/clientes", icon: Users },
   { name: "Agenda", href: "/agenda", icon: Calendar },
   { name: "Atendimentos", href: "/atendimentos", icon: CalendarPlus },
-  { name: "Link de Agendamento", href: "/link-agendamento", icon: Share2 },
   { name: "Procedimentos", href: "/procedimentos", icon: Sparkles },
   { name: "Estoque", href: "/estoque", icon: Package },
   { name: "Relatório", href: "/relatorio", icon: FileText },
@@ -46,6 +45,7 @@ const sistemaNavigation = [
   { name: "Logs", href: "/sistema/logs", icon: ScrollText },
   { name: "Profissionais", href: "/sistema/profissionais", icon: Stethoscope },
   { name: "Configuração", href: "/configuracoes", icon: Settings },
+  { name: "Link de Agendamento", href: "/link-agendamento", icon: Share2 },
 ];
 
 export function Sidebar({
