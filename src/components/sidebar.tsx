@@ -22,6 +22,7 @@ import {
   Stethoscope,
   FileText,
   Share2,
+  PieChart,
 } from "lucide-react";
 import { useSidebarCollapsed } from "@/lib/sidebar-state";
 import { EASE_OUT_EXPO } from "@/lib/motion";
@@ -30,6 +31,7 @@ import { EASE_OUT_EXPO } from "@/lib/motion";
 /* ─── Seção MENU ─────────────────────────────────────────────────────────────── */
 const menuNavigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
+  { name: "Gestão", href: "/gestao", icon: PieChart },
   { name: "Clientes", href: "/clientes", icon: Users },
   { name: "Agenda", href: "/agenda", icon: Calendar },
   { name: "Atendimentos", href: "/atendimentos", icon: CalendarPlus },
