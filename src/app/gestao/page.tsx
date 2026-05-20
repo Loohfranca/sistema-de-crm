@@ -16,7 +16,7 @@ import {
   excluirDespesa,
   coletarReceitas,
   categoriaInfo,
-  FORMAS,
+  getFormas,
   PERIODOS,
   noPeriodo,
   mesesRecentes,
@@ -24,6 +24,7 @@ import {
   GESTAO_EVENT,
   type Despesa,
   type Periodo,
+  type ItemRegistro,
 } from "@/lib/gestao";
 import {
   GraficoBarras,
@@ -31,6 +32,7 @@ import {
   GraficoRosca,
 } from "@/components/gestao/graficos";
 import { DespesaModal } from "@/components/gestao/despesa-modal";
+import { RegistrosPanel } from "@/components/gestao/registros-panel";
 
 type SubAba = "gestao" | "caixa" | "registros";
 
@@ -102,6 +104,7 @@ export default function GestaoPage() {
   const [montado, setMontado] = useState(false);
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [despesas, setDespesas] = useState<Despesa[]>([]);
+  const [formas, setFormas] = useState<ItemRegistro[]>([]);
   const [periodo, setPeriodo] = useState<Periodo>("mes");
   const [subAba, setSubAba] = useState<SubAba>("gestao");
   const [modalDespesa, setModalDespesa] = useState(false);
@@ -109,6 +112,7 @@ export default function GestaoPage() {
   const carregar = useCallback(() => {
     setAgendamentos(getAgendamentos());
     setDespesas(getDespesas());
+    setFormas(getFormas());
   }, []);
 
   useEffect(() => {
@@ -139,12 +143,14 @@ export default function GestaoPage() {
       noPeriodo(a.data, periodo),
     ).length;
 
-    const porForma = FORMAS.map((f) => ({
-      ...f,
-      valor: recP
-        .filter((r) => r.forma === f.id)
-        .reduce((s, r) => s + r.valor, 0),
-    })).filter((f) => f.valor > 0);
+    const porForma = formas
+      .map((f) => ({
+        ...f,
+        valor: recP
+          .filter((r) => r.forma === f.id)
+          .reduce((s, r) => s + r.valor, 0),
+      }))
+      .filter((f) => f.valor > 0);
 
     return {
       recP,
@@ -156,7 +162,7 @@ export default function GestaoPage() {
       agendados,
       porForma,
     };
-  }, [receitas, despesas, agendamentos, periodo]);
+  }, [receitas, despesas, agendamentos, periodo, formas]);
 
   // Série de 6 meses para os gráficos
   const serie6m = useMemo(() => {
@@ -241,13 +247,15 @@ export default function GestaoPage() {
         ))}
       </div>
 
-      {subAba !== "gestao" ? (
+      {subAba === "registros" ? (
+        <RegistrosPanel />
+      ) : subAba === "caixa" ? (
         <Card className="py-16 text-center">
           <div className="w-12 h-12 mx-auto mb-3 rounded-2xl bg-surface-high flex items-center justify-center">
             <Lock className="w-5 h-5 text-on-surface-variant" />
           </div>
           <p className="font-display text-lg font-bold text-on-surface">
-            {subAba === "caixa" ? "Caixa" : "Registros"}
+            Caixa
           </p>
           <p className="text-sm text-on-surface-variant font-body mt-1">
             Em breve — próxima etapa.

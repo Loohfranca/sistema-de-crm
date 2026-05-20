@@ -1,36 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  X,
-  Plus,
-  Trash2,
-  Smartphone,
-  Banknote,
-  CreditCard,
-  Check,
-} from "lucide-react";
-import {
-  atualizarAgendamento,
-  type Agendamento,
-} from "@/lib/store";
+import { X, Plus, Trash2, Check } from "lucide-react";
+import { atualizarAgendamento, type Agendamento } from "@/lib/store";
 import { getProfissionais } from "@/lib/profissionais";
+import { getFormas, formaInfo } from "@/lib/gestao";
 
-// ─── Tipos de pagamento (modelo simples — financeiro será revisto depois) ─────
-export type FormaPagamento = "pix" | "dinheiro" | "cartao";
-
+// ─── Recebimento de pagamento ────────────────────────────────────────────────
 export interface Recebimento {
   valor: number;
-  forma: FormaPagamento;
+  forma: string; // id de forma de pagamento (definida na aba Registros)
   data: string; // YYYY-MM-DD
   anotacoes?: string;
 }
-
-const FORMAS: { id: FormaPagamento; label: string; icon: typeof Smartphone }[] = [
-  { id: "pix", label: "Pix", icon: Smartphone },
-  { id: "dinheiro", label: "Dinheiro", icon: Banknote },
-  { id: "cartao", label: "Cartão", icon: CreditCard },
-];
 
 const inputCls =
   "w-full px-4 py-2.5 rounded-2xl bg-surface-high text-on-surface text-sm font-body border border-transparent focus:border-primary/30 focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all placeholder:text-outline";
@@ -39,10 +21,6 @@ const labelCls =
 
 function brl(n: number): string {
   return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
-function formaLabel(f: FormaPagamento): string {
-  return FORMAS.find((x) => x.id === f)?.label ?? f;
 }
 
 // Lê recebimentos já gravados no pagamento do agendamento
@@ -74,8 +52,9 @@ function InserirPagamento({
   onInserir: (r: Recebimento) => void;
   onCancelar: () => void;
 }) {
+  const formas = getFormas();
   const [valor, setValor] = useState(sugestao > 0 ? String(sugestao) : "");
-  const [forma, setForma] = useState<FormaPagamento>("pix");
+  const [forma, setForma] = useState(formas[0]?.id ?? "");
   const [data, setData] = useState(new Date().toISOString().slice(0, 10));
   const [anotacoes, setAnotacoes] = useState("");
 
@@ -100,10 +79,10 @@ function InserirPagamento({
           <label className={labelCls}>Forma de pagamento</label>
           <select
             value={forma}
-            onChange={(e) => setForma(e.target.value as FormaPagamento)}
+            onChange={(e) => setForma(e.target.value)}
             className={`${inputCls} bg-surface-lowest`}
           >
-            {FORMAS.map((f) => (
+            {formas.map((f) => (
               <option key={f.id} value={f.id}>
                 {f.label}
               </option>
@@ -140,7 +119,7 @@ function InserirPagamento({
         </button>
         <button
           type="button"
-          disabled={valorNum <= 0}
+          disabled={valorNum <= 0 || !forma}
           onClick={() =>
             onInserir({
               valor: valorNum,
@@ -393,7 +372,7 @@ export function EditarAtendimentoModal({
                           {brl(r.valor)}
                         </span>
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold font-body bg-primary/10 text-primary">
-                          {formaLabel(r.forma)}
+                          {formaInfo(r.forma).label}
                         </span>
                         <span className="text-[11px] text-on-surface-variant font-body">
                           {r.data.split("-").reverse().join("/")}
