@@ -6,6 +6,8 @@ import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft, Calendar, Phone, Mail, MapPin, AlertTriangle, Heart,
   Clock, Sparkles, Star, Diamond, Crown, Pencil, Trash2,
+  CheckCircle2, CalendarClock, RotateCcw, XCircle, Wallet,
+  TrendingUp, Repeat, UserRound,
 } from "lucide-react";
 import { GaleriaFotos } from "@/components/clientes/galeria-fotos";
 import { ClienteFormModal } from "@/components/clientes/cliente-form-modal";
@@ -42,6 +44,10 @@ function formatBirthDate(birthDate: string): string {
   const [y, m, d] = birthDate.split("-");
   if (!y || !m || !d) return birthDate;
   return `${d}/${m}/${y}`;
+}
+
+function brl(n: number): string {
+  return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
 export default function ClienteDetailPage() {
@@ -93,6 +99,55 @@ export default function ClienteDetailPage() {
     cliente?.tier || "silver";
 
   const idade = cliente ? calcAge(cliente.birthDate) : null;
+
+  // Estatísticas de agendamentos da cliente
+  const stats = useMemo(() => {
+    const realiz = meusAtendimentos.filter((a) => a.status === "realizado");
+    const cancelados = meusAtendimentos.filter(
+      (a) => a.status === "cancelado",
+    ).length;
+    const remarcacoes = meusAtendimentos.reduce(
+      (s, a) => s + (a.remarcacoes?.length ?? 0),
+      0,
+    );
+    const hoje = new Date().toISOString().slice(0, 10);
+    const futuros = meusAtendimentos.filter(
+      (a) => a.status === "agendado" && a.data >= hoje,
+    ).length;
+    const valorTotal = realiz.reduce((s, a) => s + (a.valor || 0), 0);
+    const ticket = realiz.length ? valorTotal / realiz.length : 0;
+
+    // Frequência média — dias entre procedimentos realizados
+    const datas = realiz.map((a) => a.data).sort();
+    let freq = 0;
+    if (datas.length >= 2) {
+      let soma = 0;
+      for (let i = 1; i < datas.length; i++) {
+        const d1 = new Date(datas[i - 1] + "T12:00:00").getTime();
+        const d2 = new Date(datas[i] + "T12:00:00").getTime();
+        soma += (d2 - d1) / 86400000;
+      }
+      freq = Math.round(soma / (datas.length - 1));
+    }
+
+    const topDe = (vals: string[]): string => {
+      const conta = new Map<string, number>();
+      for (const v of vals) if (v) conta.set(v, (conta.get(v) ?? 0) + 1);
+      return [...conta.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "—";
+    };
+
+    return {
+      realizados: realiz.length,
+      cancelados,
+      remarcacoes,
+      futuros,
+      valorTotal,
+      ticket,
+      freq,
+      servicoTop: topDe(realiz.map((a) => a.procedimento)),
+      profissionalTop: topDe(meusAtendimentos.map((a) => a.profissional)),
+    };
+  }, [meusAtendimentos]);
 
   if (!cliente) {
     return (
@@ -211,47 +266,61 @@ export default function ClienteDetailPage() {
         </div>
       </div>
 
-      {/* Stats Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-        <div className="bg-surface-lowest rounded-3xl p-5 shadow-ambient">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 bg-primary-fixed rounded-2xl flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-on-primary-container" />
-            </div>
-          </div>
-          <p className="font-display text-xl font-bold text-on-surface">{realizados.length}</p>
-          <p className="text-xs text-on-surface-variant font-body mt-0.5">Procedimentos realizados</p>
+      {/* Estatísticas */}
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard
+            icone={<CheckCircle2 className="w-4 h-4" />}
+            rotulo="Realizados"
+            valor={String(stats.realizados)}
+          />
+          <StatCard
+            icone={<CalendarClock className="w-4 h-4" />}
+            rotulo="Agendados"
+            valor={String(stats.futuros)}
+          />
+          <StatCard
+            icone={<RotateCcw className="w-4 h-4" />}
+            rotulo="Remarcações"
+            valor={String(stats.remarcacoes)}
+          />
+          <StatCard
+            icone={<XCircle className="w-4 h-4" />}
+            rotulo="Cancelados"
+            valor={String(stats.cancelados)}
+          />
         </div>
-        <div className="bg-surface-lowest rounded-3xl p-5 shadow-ambient">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 bg-secondary-fixed rounded-2xl flex items-center justify-center">
-              <Calendar className="w-5 h-5 text-on-secondary-container" />
-            </div>
-          </div>
-          <p className="font-display text-xl font-bold text-on-surface">{meusAtendimentos.length}</p>
-          <p className="text-xs text-on-surface-variant font-body mt-0.5">Total de atendimentos</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <StatCard
+            icone={<Wallet className="w-4 h-4" />}
+            rotulo="Total gasto"
+            valor={brl(stats.valorTotal)}
+            destaque
+          />
+          <StatCard
+            icone={<TrendingUp className="w-4 h-4" />}
+            rotulo="Ticket médio"
+            valor={brl(stats.ticket)}
+            destaque
+          />
+          <StatCard
+            icone={<Repeat className="w-4 h-4" />}
+            rotulo="Frequência média"
+            valor={stats.freq ? `${stats.freq} dias` : "—"}
+            destaque
+          />
         </div>
-        <div className="bg-surface-lowest rounded-3xl p-5 shadow-ambient">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 bg-tertiary-fixed rounded-2xl flex items-center justify-center">
-              <Clock className="w-5 h-5 text-on-tertiary-container" />
-            </div>
-          </div>
-          <p className="font-display text-xl font-bold text-on-surface">
-            {ultimaVisitaDerivada ?? "—"}
-          </p>
-          <p className="text-xs text-on-surface-variant font-body mt-0.5">Última visita</p>
-        </div>
-        <div className="bg-surface-lowest rounded-3xl p-5 shadow-ambient">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 bg-primary-container rounded-2xl flex items-center justify-center">
-              <Star className="w-5 h-5 text-on-primary-container" />
-            </div>
-          </div>
-          <p className="font-display text-xl font-bold text-on-surface capitalize">
-            {tierDerivado === "diamond" ? "Diamante" : tierDerivado === "gold" ? "Ouro" : "Prata"}
-          </p>
-          <p className="text-xs text-on-surface-variant font-body mt-0.5">Categoria</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <StatWide
+            icone={<Sparkles className="w-5 h-5" />}
+            rotulo="Serviço mais realizado"
+            valor={stats.servicoTop}
+          />
+          <StatWide
+            icone={<UserRound className="w-5 h-5" />}
+            rotulo="Profissional preferido"
+            valor={stats.profissionalTop}
+          />
         </div>
       </div>
 
@@ -263,7 +332,17 @@ export default function ClienteDetailPage() {
             Histórico de Tratamentos
           </h2>
           <p className="text-sm text-on-surface-variant font-body mb-6">
-            Todos os procedimentos {meusAtendimentos.length > 0 && `(${meusAtendimentos.length})`}
+            {meusAtendimentos.length} atendimento
+            {meusAtendimentos.length !== 1 ? "s" : ""}
+            {stats.valorTotal > 0 && (
+              <>
+                {" · "}
+                <span className="font-semibold text-on-surface">
+                  {brl(stats.valorTotal)}
+                </span>{" "}
+                em procedimentos realizados
+              </>
+            )}
           </p>
 
           {meusAtendimentos.length === 0 ? (
@@ -298,15 +377,26 @@ export default function ClienteDetailPage() {
                       }`} />
                       <div className="flex-1 p-4 rounded-2xl bg-surface-low">
                         <div className="flex items-start justify-between gap-3 mb-1.5 flex-wrap">
-                          <p className="text-sm font-medium text-on-surface font-body">{apt.procedimento}</p>
-                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold font-body ${sc.cls}`}>
-                            <StatusIcon className="w-2.5 h-2.5" />{sc.label}
-                          </span>
+                          <div className="min-w-0">
+                            <p className="text-sm font-bold text-on-surface font-body">
+                              {apt.procedimento}
+                            </p>
+                            <p className="text-xs text-on-surface-variant font-body mt-0.5">
+                              {apt.profissional} • {isoParaBR(apt.data)} às{" "}
+                              {String(apt.horaInicio).padStart(2, "0")}:
+                              {String(apt.minutoInicio).padStart(2, "0")} •{" "}
+                              {apt.duracao} min
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-sm font-bold text-primary font-display">
+                              {brl(apt.valor)}
+                            </span>
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold font-body ${sc.cls}`}>
+                              <StatusIcon className="w-2.5 h-2.5" />{sc.label}
+                            </span>
+                          </div>
                         </div>
-                        <p className="text-xs text-on-surface-variant font-body">
-                          {apt.profissional} • {isoParaBR(apt.data)} às{" "}
-                          {String(apt.horaInicio).padStart(2, "0")}:{String(apt.minutoInicio).padStart(2, "0")}
-                        </p>
                         {apt.observacoes && (
                           <p className="text-xs text-outline font-body mt-2">{apt.observacoes}</p>
                         )}
@@ -429,6 +519,64 @@ export default function ClienteDetailPage() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─── Cards de estatística ────────────────────────────────────────────────────
+function StatCard({
+  icone,
+  rotulo,
+  valor,
+  destaque,
+}: {
+  icone: React.ReactNode;
+  rotulo: string;
+  valor: string;
+  destaque?: boolean;
+}) {
+  return (
+    <div className="bg-surface-lowest rounded-3xl p-5 shadow-ambient">
+      <div className="flex items-center gap-2 mb-2">
+        <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+          {icone}
+        </div>
+        <span className="text-xs text-on-surface-variant font-body">{rotulo}</span>
+      </div>
+      <p
+        className={`font-display font-bold text-on-surface ${
+          destaque ? "text-xl" : "text-2xl"
+        }`}
+      >
+        {valor}
+      </p>
+    </div>
+  );
+}
+
+function StatWide({
+  icone,
+  rotulo,
+  valor,
+}: {
+  icone: React.ReactNode;
+  rotulo: string;
+  valor: string;
+}) {
+  return (
+    <div className="bg-surface-lowest rounded-3xl p-5 shadow-ambient">
+      <div className="flex items-center gap-3">
+        <div className="w-11 h-11 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
+          {icone}
+        </div>
+        <div className="min-w-0">
+          <p className="text-xs text-on-surface-variant font-body">{rotulo}</p>
+          <p className="font-display text-lg font-bold text-on-surface truncate">
+            {valor}
+          </p>
+        </div>
+      </div>
+      <div className="mt-3 h-1 rounded-full gradient-primary" />
     </div>
   );
 }
