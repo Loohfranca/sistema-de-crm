@@ -15,6 +15,7 @@ import {
   Star,
   Clock3,
   ShieldCheck,
+  CalendarPlus,
 } from "lucide-react";
 import { getServicos } from "@/lib/servicos";
 import { getProfissionais, type DiaSemana } from "@/lib/profissionais";
@@ -68,6 +69,7 @@ export default function AgendarPage() {
   const [clinicaNome, setClinicaNome] = useState("Studio Estética");
 
   const [step, setStep] = useState(1);
+  const [confirmadoId, setConfirmadoId] = useState(0);
   const [servicoId, setServicoId] = useState("");
   const [profissionalId, setProfissionalId] = useState<number | null>(null);
   const [dataISO, setDataISO] = useState("");
@@ -240,6 +242,7 @@ export default function AgendarPage() {
       entidade: "agendamento",
       descricao: `Agendamento online: ${servico.nome} para ${nome.trim()}`,
     });
+    setConfirmadoId(maxId + 1);
     setStep(5);
   }
 
@@ -251,7 +254,43 @@ export default function AgendarPage() {
     setNome("");
     setTelefone("");
     setObservacoes("");
+    setConfirmadoId(0);
     setStep(1);
+  }
+
+  // Gera um arquivo .ics para a cliente adicionar no calendário do celular
+  function baixarICS() {
+    if (!servico || !profissional) return;
+    const [h] = horario.split(":").map(Number);
+    const inicio = new Date(dataISO + "T00:00:00");
+    inicio.setHours(h, 0, 0, 0);
+    const fim = new Date(inicio.getTime() + servico.duracao * 60000);
+    const fmt = (d: Date) =>
+      `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(
+        d.getDate(),
+      ).padStart(2, "0")}T${String(d.getHours()).padStart(2, "0")}${String(
+        d.getMinutes(),
+      ).padStart(2, "0")}00`;
+    const ics = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//CRM//Agendamento//PT-BR",
+      "BEGIN:VEVENT",
+      `UID:agendamento-${confirmadoId}-${Date.now()}@crm`,
+      `DTSTART:${fmt(inicio)}`,
+      `DTEND:${fmt(fim)}`,
+      `SUMMARY:${servico.nome} — ${clinicaNome}`,
+      `DESCRIPTION:Profissional: ${profissional.nome}`,
+      "END:VEVENT",
+      "END:VCALENDAR",
+    ].join("\r\n");
+    const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "agendamento.ics";
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   if (!montado) return null;
@@ -260,45 +299,61 @@ export default function AgendarPage() {
   if (step === 5 && servico && profissional) {
     return (
       <Fundo>
-        <div className="w-full max-w-[440px]">
-          <div className="bg-surface-lowest rounded-[1.75rem] shadow-ambient overflow-hidden">
-            <div className="gradient-primary px-8 pt-9 pb-8 text-center text-on-primary">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-on-primary/15 flex items-center justify-center backdrop-blur">
-                <CheckCircle2 className="w-8 h-8" />
-              </div>
-              <h1 className="font-display text-2xl font-bold">
-                Agendamento confirmado!
-              </h1>
-              <p className="text-sm opacity-90 font-body mt-1.5">
-                {nome.trim().split(/\s+/)[0]}, seu horário está reservado 💖
-              </p>
+        <div className="w-full max-w-[470px]">
+          <div className="bg-surface-lowest rounded-[1.75rem] shadow-ambient p-8">
+            {/* Selo de sucesso */}
+            <div className="w-16 h-16 mx-auto rounded-full bg-secondary-container flex items-center justify-center ring-8 ring-secondary-container/30">
+              <CheckCircle2 className="w-8 h-8 text-on-secondary-container" />
             </div>
-            <div className="p-6">
-              <div className="rounded-2xl bg-surface-low p-5 space-y-3">
-                <ResumoLinha rotulo="Serviço" valor={servico.nome} />
-                <ResumoLinha rotulo="Profissional" valor={profissional.nome} />
-                <ResumoLinha rotulo="Data" valor={dataLonga(dataISO)} />
-                <ResumoLinha rotulo="Horário" valor={horario} />
-                <div className="pt-3 border-t border-outline-variant/15 flex items-center justify-between">
-                  <span className="text-xs font-semibold text-on-surface-variant font-body uppercase tracking-wider">
-                    Valor
-                  </span>
-                  <span className="font-display text-lg font-bold text-primary">
-                    {brl(servico.preco)}
-                  </span>
-                </div>
-              </div>
-              <p className="text-[11px] text-on-surface-variant font-body text-center mt-4">
-                Guarde esta confirmação. Em caso de imprevisto, avise com
-                antecedência.
+            <h1 className="text-center font-display text-2xl font-bold text-on-surface mt-4">
+              Agendamento confirmado!
+            </h1>
+            <p className="text-center text-sm text-on-surface-variant font-body mt-1">
+              {nome.trim().split(/\s+/)[0]}, seu horário está reservado 💖
+            </p>
+            {confirmadoId > 0 && (
+              <p className="text-center text-[11px] text-on-surface-variant font-body mt-1.5">
+                Comprovante nº {String(confirmadoId).padStart(4, "0")}
               </p>
-              <button
-                onClick={reiniciar}
-                className="mt-5 w-full py-3.5 rounded-full text-sm font-semibold font-body gradient-primary text-on-primary hover:opacity-90 transition-opacity"
-              >
-                Fazer novo agendamento
-              </button>
+            )}
+
+            {/* Detalhes */}
+            <div className="mt-6 rounded-2xl bg-surface-low p-5 grid grid-cols-2 gap-x-5 gap-y-4">
+              <Detalhe rotulo="Data" valor={dataLonga(dataISO)} />
+              <Detalhe rotulo="Horário" valor={horario} />
+              <Detalhe rotulo="Serviço" valor={servico.nome} />
+              <Detalhe rotulo="Profissional" valor={profissional.nome} />
+              <Detalhe rotulo="Cliente" valor={nome.trim()} />
+              <Detalhe rotulo="Telefone" valor={telefone.trim() || "—"} />
             </div>
+
+            {/* Valor total */}
+            <div className="mt-3 rounded-2xl gradient-primary text-on-primary px-5 py-4 flex items-center justify-between">
+              <span className="text-sm font-body opacity-90">Valor total</span>
+              <span className="font-display text-xl font-bold">
+                {brl(servico.preco)}
+              </span>
+            </div>
+
+            <p className="text-[11px] text-on-surface-variant font-body text-center mt-4">
+              Guarde esta confirmação. Em caso de imprevisto, avise com
+              antecedência.
+            </p>
+
+            {/* Ações */}
+            <button
+              onClick={baixarICS}
+              className="mt-5 w-full inline-flex items-center justify-center gap-2 py-3 rounded-full text-sm font-semibold font-body bg-surface-high text-on-surface hover:bg-surface-highest transition-colors"
+            >
+              <CalendarPlus className="w-4 h-4" />
+              Adicionar ao calendário
+            </button>
+            <button
+              onClick={reiniciar}
+              className="mt-2.5 w-full py-3 rounded-full text-sm font-semibold font-body gradient-primary text-on-primary hover:opacity-90 transition-opacity"
+            >
+              Fazer novo agendamento
+            </button>
           </div>
         </div>
       </Fundo>
@@ -848,6 +903,19 @@ function Campo({
         {rotulo}
       </label>
       {children}
+    </div>
+  );
+}
+
+function Detalhe({ rotulo, valor }: { rotulo: string; valor: string }) {
+  return (
+    <div className="min-w-0">
+      <p className="text-[10px] font-semibold text-on-surface-variant font-body uppercase tracking-widest mb-0.5">
+        {rotulo}
+      </p>
+      <p className="text-sm font-bold text-on-surface font-body capitalize break-words">
+        {valor}
+      </p>
     </div>
   );
 }
