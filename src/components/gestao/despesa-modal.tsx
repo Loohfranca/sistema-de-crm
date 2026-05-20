@@ -2,7 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { X, TrendingDown } from "lucide-react";
-import { adicionarDespesa, getCategorias } from "@/lib/gestao";
+import {
+  adicionarDespesa,
+  editarDespesa,
+  getCategorias,
+  type Despesa,
+} from "@/lib/gestao";
 
 const inputCls =
   "w-full px-4 py-2.5 rounded-2xl bg-surface-high text-on-surface text-sm font-body border border-transparent focus:border-primary/30 focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all placeholder:text-outline";
@@ -10,17 +15,23 @@ const labelCls =
   "block text-[10px] font-semibold text-on-surface-variant font-body uppercase tracking-widest mb-1.5";
 
 export function DespesaModal({
+  despesa,
   onClose,
   onSaved,
 }: {
+  despesa?: Despesa;
   onClose: () => void;
   onSaved: () => void;
 }) {
   const categorias = getCategorias();
-  const [valor, setValor] = useState("");
-  const [categoria, setCategoria] = useState(categorias[0]?.id ?? "");
-  const [descricao, setDescricao] = useState("");
-  const [data, setData] = useState(new Date().toISOString().slice(0, 10));
+  const [valor, setValor] = useState(despesa ? String(despesa.valor) : "");
+  const [categoria, setCategoria] = useState(
+    despesa?.categoria ?? categorias[0]?.id ?? "",
+  );
+  const [descricao, setDescricao] = useState(despesa?.descricao ?? "");
+  const [data, setData] = useState(
+    despesa?.data ?? new Date().toISOString().slice(0, 10),
+  );
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -29,15 +40,26 @@ export function DespesaModal({
   }, [onClose]);
 
   const valorNum = Number(valor) || 0;
+  const editando = !!despesa;
 
   function handleSalvar() {
     if (valorNum <= 0 || !categoria) return;
-    adicionarDespesa({
-      valor: valorNum,
-      categoria,
-      descricao: descricao.trim(),
-      data,
-    });
+    if (editando) {
+      editarDespesa({
+        ...despesa!,
+        valor: valorNum,
+        categoria,
+        descricao: descricao.trim(),
+        data,
+      });
+    } else {
+      adicionarDespesa({
+        valor: valorNum,
+        categoria,
+        descricao: descricao.trim(),
+        data,
+      });
+    }
     onSaved();
   }
 
@@ -58,7 +80,7 @@ export function DespesaModal({
                 <TrendingDown className="w-5 h-5 text-on-error-container" />
               </div>
               <h2 className="font-display text-xl font-bold text-on-surface">
-                Nova despesa
+                {editando ? "Editar despesa" : "Nova despesa"}
               </h2>
             </div>
             <button
@@ -147,7 +169,7 @@ export function DespesaModal({
               disabled={valorNum <= 0 || !categoria}
               className="flex-1 py-3 rounded-full text-sm font-semibold font-body gradient-primary text-on-primary hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              Lançar despesa
+              {editando ? "Salvar" : "Lançar despesa"}
             </button>
           </div>
         </div>

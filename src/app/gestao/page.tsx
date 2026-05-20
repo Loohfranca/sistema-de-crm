@@ -8,7 +8,8 @@ import {
   CalendarCheck,
   Plus,
   Trash2,
-  Lock,
+  ArrowRight,
+  CheckCircle2,
 } from "lucide-react";
 import { getAgendamentos, type Agendamento } from "@/lib/store";
 import {
@@ -33,6 +34,7 @@ import {
 } from "@/components/gestao/graficos";
 import { DespesaModal } from "@/components/gestao/despesa-modal";
 import { RegistrosPanel } from "@/components/gestao/registros-panel";
+import { CaixaPanel } from "@/components/gestao/caixa-panel";
 
 type SubAba = "gestao" | "caixa" | "registros";
 
@@ -179,6 +181,7 @@ export default function GestaoPage() {
   }, [receitas, despesas]);
 
   const total6mReceita = serie6m.reduce((s, m) => s + m.receita, 0);
+  const total6mDespesa = serie6m.reduce((s, m) => s + m.despesa, 0);
   const total6mLucro = serie6m.reduce((s, m) => s + m.lucro, 0);
   const margem6m =
     total6mReceita > 0 ? (total6mLucro / total6mReceita) * 100 : 0;
@@ -250,17 +253,7 @@ export default function GestaoPage() {
       {subAba === "registros" ? (
         <RegistrosPanel />
       ) : subAba === "caixa" ? (
-        <Card className="py-16 text-center">
-          <div className="w-12 h-12 mx-auto mb-3 rounded-2xl bg-surface-high flex items-center justify-center">
-            <Lock className="w-5 h-5 text-on-surface-variant" />
-          </div>
-          <p className="font-display text-lg font-bold text-on-surface">
-            Caixa
-          </p>
-          <p className="text-sm text-on-surface-variant font-body mt-1">
-            Em breve — próxima etapa.
-          </p>
-        </Card>
+        <CaixaPanel />
       ) : (
         <>
           {/* Filtro de período + nova despesa */}
@@ -343,9 +336,18 @@ export default function GestaoPage() {
 
             {/* Detalhes da receita */}
             <Card>
-              <h2 className="font-display text-lg font-bold text-on-surface mb-1">
-                Detalhes da receita
-              </h2>
+              <div className="flex items-start justify-between gap-3 mb-1">
+                <h2 className="font-display text-lg font-bold text-on-surface">
+                  Detalhes da receita
+                </h2>
+                <button
+                  onClick={() => setSubAba("caixa")}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-semibold font-body bg-surface-high text-primary hover:bg-surface-highest transition-colors shrink-0"
+                >
+                  Ver mais
+                  <ArrowRight className="w-3 h-3" />
+                </button>
+              </div>
               <p className="text-xs text-on-surface-variant font-body mb-4">
                 Por forma de pagamento — período selecionado
               </p>
@@ -376,24 +378,63 @@ export default function GestaoPage() {
               )}
             </Card>
 
-            {/* Lucro — gráfico de linhas */}
+            {/* Lucro — detalhado */}
             <Card className="lg:col-span-2">
-              <div className="flex flex-wrap items-baseline justify-between gap-3 mb-1">
-                <h2 className="font-display text-lg font-bold text-on-surface">
-                  Lucro
-                </h2>
-                <div className="flex items-baseline gap-3">
-                  <span className="font-display text-xl font-bold text-secondary">
-                    {brl(total6mLucro)}
+              <h2 className="font-display text-lg font-bold text-on-surface">
+                Lucro
+              </h2>
+
+              <div className="flex items-baseline gap-2 mt-3">
+                <span className="font-display text-3xl font-bold text-on-surface">
+                  {brl(total6mLucro)}
+                </span>
+                <span className="text-xs text-on-surface-variant font-body">
+                  total dos últimos 6 meses
+                </span>
+              </div>
+
+              <p
+                className={`mt-2 inline-flex items-center gap-1.5 text-sm font-semibold font-body ${
+                  margem6m >= 0 ? "text-secondary" : "text-error"
+                }`}
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                Margem de lucro: {margem6m.toFixed(0)}%
+              </p>
+
+              {/* Valor / Detalhes */}
+              <div className="mt-5 mb-6 max-w-sm">
+                <div className="grid grid-cols-2 gap-x-10">
+                  <span className="text-[10px] font-semibold text-on-surface-variant font-body uppercase tracking-widest">
+                    Valor
                   </span>
-                  <span className="text-xs font-semibold text-on-surface-variant font-body">
-                    margem {margem6m.toFixed(0)}%
+                  <span className="text-[10px] font-semibold text-on-surface-variant font-body uppercase tracking-widest">
+                    Detalhes
                   </span>
                 </div>
+                {[
+                  { label: "Lucro", valor: total6mLucro, cor: COR_LUCRO },
+                  { label: "Receita", valor: total6mReceita, cor: COR_RECEITA },
+                  { label: "Despesas", valor: total6mDespesa, cor: COR_DESPESA },
+                ].map((linha) => (
+                  <div
+                    key={linha.label}
+                    className="grid grid-cols-2 gap-x-10 mt-2.5"
+                  >
+                    <span className="text-sm font-bold text-on-surface font-body tabular-nums">
+                      {brl(linha.valor)}
+                    </span>
+                    <span className="inline-flex items-center gap-2 text-sm font-body text-on-surface">
+                      <span
+                        className="w-2.5 h-2.5 rounded-full shrink-0"
+                        style={{ backgroundColor: linha.cor }}
+                      />
+                      {linha.label}
+                    </span>
+                  </div>
+                ))}
               </div>
-              <p className="text-xs text-on-surface-variant font-body mb-4">
-                Receita, despesa e lucro — últimos 6 meses
-              </p>
+
               <GraficoLinhas
                 labels={serie6m.map((m) => m.label)}
                 series={[
@@ -429,9 +470,18 @@ export default function GestaoPage() {
 
             {/* Detalhes de despesas */}
             <Card>
-              <h2 className="font-display text-lg font-bold text-on-surface mb-1">
-                Detalhes de despesas
-              </h2>
+              <div className="flex items-start justify-between gap-3 mb-1">
+                <h2 className="font-display text-lg font-bold text-on-surface">
+                  Detalhes de despesas
+                </h2>
+                <button
+                  onClick={() => setSubAba("caixa")}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-semibold font-body bg-surface-high text-primary hover:bg-surface-highest transition-colors shrink-0"
+                >
+                  Ver mais
+                  <ArrowRight className="w-3 h-3" />
+                </button>
+              </div>
               <p className="text-xs text-on-surface-variant font-body mb-4">
                 Lançamentos do período
               </p>

@@ -174,6 +174,14 @@ export function adicionarDespesa(d: Omit<Despesa, "id">): Despesa[] {
   return lista;
 }
 
+export function editarDespesa(despesa: Despesa): Despesa[] {
+  const lista = getDespesas().map((d) =>
+    d.id === despesa.id ? despesa : d,
+  );
+  salvarDespesas(lista);
+  return lista;
+}
+
 export function excluirDespesa(id: string): Despesa[] {
   const lista = getDespesas().filter((d) => d.id !== id);
   salvarDespesas(lista);
