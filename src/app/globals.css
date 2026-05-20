@@ -277,14 +277,31 @@ body {
 
 
 
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: var(--surface-container-low); }
-::-webkit-scrollbar-thumb { background: var(--outline-variant); border-radius: 999px; }
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--surface-container-low);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--outline-variant);
+  border-radius: 999px;
+}
 
 /* ─── Impressão ───────────────────────────────────────────────────────────── */
 @media print {
-  @page { size: A4; margin: 14mm 12mm; }
-  :root, :root[data-theme="dark"], :root[data-palette="rose"], :root[data-palette="onyx"], :root[data-palette="ocean"] {
+  @page {
+    size: A4;
+    margin: 14mm 12mm;
+  }
+
+  :root,
+  :root[data-theme="dark"],
+  :root[data-palette="rose"],
+  :root[data-palette="onyx"],
+  :root[data-palette="ocean"] {
     color-scheme: light;
     --background: #ffffff;
     --foreground: #0a0a0a;
@@ -300,13 +317,33 @@ body {
     --outline: #9ca3af;
     --outline-variant: #d1d5db;
   }
-  html, body { background: #ffffff !important; }
-  body { font-size: 10pt; }
-  .no-print { display: none !important; }
-  .relatorio { max-width: none !important; padding: 0 !important; }
-  .relatorio section, .relatorio table, .relatorio tr, .relatorio thead, .relatorio tfoot {
+
+  html,
+  body {
+    background: #ffffff !important;
+  }
+
+  body {
+    font-size: 10pt;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .relatorio {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  .relatorio section,
+  .relatorio table,
+  .relatorio tr,
+  .relatorio thead,
+  .relatorio tfoot {
     break-inside: avoid;
   }
+
   * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
