@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { X, Check, CalendarDays, Clock, Stethoscope, User, RotateCcw, CalendarClock } from "lucide-react";
+import { X, Check, CalendarDays, Clock, Stethoscope, User, RotateCcw, CalendarClock, Pencil, Wallet } from "lucide-react";
 import { colorMap, statusConfig, timeStr, endTime } from "@/lib/agenda-config";
 import { remarcarAgendamento, type Agendamento, type StatusApt } from "@/lib/store";
 import {
@@ -12,12 +12,44 @@ import {
   sidePanelVariants,
 } from "@/lib/motion";
 
-export function SidePanel({ apt, onClose, onStatusChange }: {
+function brl(n: number): string {
+  return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+// Lê o valor recebido do pagamento (campo livre no Agendamento)
+function infoPag(apt: Agendamento): {
+  recebido: number;
+  pago: "total" | "parcial" | "nenhum";
+} {
+  if (!apt.pagamento) return { recebido: 0, pago: "nenhum" };
+  const p = apt.pagamento as Record<string, unknown>;
+  let recebido = 0;
+  if (Array.isArray(p.recebimentos)) {
+    recebido = (p.recebimentos as { valor: number }[]).reduce(
+      (s, r) => s + (Number(r.valor) || 0),
+      0,
+    );
+  } else {
+    recebido = Number(p.liquido ?? p.total ?? 0) || 0;
+  }
+  const pago =
+    recebido <= 0 ? "nenhum" : recebido >= apt.valor ? "total" : "parcial";
+  return { recebido, pago };
+}
+
+export function SidePanel({ apt, onClose, onStatusChange, onEditar }: {
   apt: Agendamento;
   onClose: () => void;
   onStatusChange: (id: number, s: StatusApt, retorno?: string) => void;
+  onEditar: () => void;
 }) {
   const c = colorMap[apt.cor], sc = statusConfig[apt.status], StatusIcon = sc.icon;
+  const pag = infoPag(apt);
+  const pagCfg = {
+    total: { label: "Pago total", cls: "bg-secondary-container text-on-secondary-container" },
+    parcial: { label: "Parcial", cls: "bg-tertiary-container text-on-tertiary-container" },
+    nenhum: { label: "Não pago", cls: "bg-surface-high text-on-surface-variant" },
+  }[pag.pago];
   const dateStr = new Date(apt.data + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
   const [mostrarRetorno, setMostrarRetorno] = useState(false);
@@ -106,6 +138,23 @@ export function SidePanel({ apt, onClose, onStatusChange }: {
             ))}
           </div>
 
+          {/* Pagamento */}
+          <div className="bg-surface-low rounded-2xl p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Wallet className="w-3.5 h-3.5 text-on-surface-variant" />
+              <span className="text-[10px] uppercase tracking-widest text-on-surface-variant font-body">Pagamento</span>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-semibold text-on-surface font-body">
+                {brl(pag.recebido)}
+                <span className="text-on-surface-variant font-medium"> / {brl(apt.valor)}</span>
+              </p>
+              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold font-body ${pagCfg.cls}`}>
+                {pagCfg.label}
+              </span>
+            </div>
+          </div>
+
           {apt.observacoes && (
             <div className="bg-surface-low rounded-2xl p-4">
               <p className="text-[10px] uppercase tracking-widest text-on-surface-variant font-body mb-2">Observações</p>
@@ -147,6 +196,13 @@ export function SidePanel({ apt, onClose, onStatusChange }: {
 
         {/* Footer */}
         <div className="p-6 space-y-3 border-t border-outline-variant/20 shrink-0">
+          <button
+            onClick={onEditar}
+            className="w-full py-2.5 rounded-2xl bg-surface-high text-on-surface text-sm font-semibold font-body flex items-center justify-center gap-2 hover:bg-surface-highest transition-colors"
+          >
+            <Pencil className="w-4 h-4" />Editar / Lançar pagamento
+          </button>
+
           {apt.status === "agendado" && !mostrarRetorno && (
             <button onClick={() => setMostrarRetorno(true)} className="w-full py-3 rounded-2xl bg-secondary-fixed text-on-secondary-container text-sm font-semibold font-body flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
               <Check className="w-4 h-4" />Marcar como Realizado

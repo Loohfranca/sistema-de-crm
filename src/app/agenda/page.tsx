@@ -17,6 +17,7 @@ import { statusConfig } from "@/lib/agenda-config";
 import { MiniCalendar } from "@/components/agenda/mini-calendar";
 import { EventCard } from "@/components/agenda/event-card";
 import { SidePanel } from "@/components/agenda/side-panel";
+import { EditarAtendimentoModal } from "@/components/agendamentos/editar-atendimento-modal";
 
 export default function AgendaPage() {
   const router = useRouter();
@@ -24,6 +25,7 @@ export default function AgendaPage() {
   const [selectedDate, setSelectedDate] = useState(today);
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [panelApt, setPanelApt] = useState<Agendamento | null>(null);
+  const [editarApt, setEditarApt] = useState<Agendamento | null>(null);
   const [view, setView] = useState<"week" | "day" | "month">("week");
   const [dragOverDay, setDragOverDay] = useState<string | null>(null);
   const [hoverDay, setHoverDay] = useState<string | null>(null);
@@ -394,9 +396,25 @@ export default function AgendaPage() {
             apt={panelApt}
             onClose={() => setPanelApt(null)}
             onStatusChange={handleStatusChange}
+            onEditar={() => {
+              setEditarApt(panelApt);
+              setPanelApt(null);
+            }}
           />
         )}
       </AnimatePresence>
+
+      {/* Modal de edição / pagamento */}
+      {editarApt && (
+        <EditarAtendimentoModal
+          apt={editarApt}
+          onClose={() => setEditarApt(null)}
+          onSaved={() => {
+            setEditarApt(null);
+            carregar();
+          }}
+        />
+      )}
     </div>
   );
 }
