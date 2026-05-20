@@ -10,6 +10,7 @@ import {
 import { GaleriaFotos } from "@/components/clientes/galeria-fotos";
 import { ClienteFormModal } from "@/components/clientes/cliente-form-modal";
 import { ConfirmarExclusao } from "@/components/clientes/confirmar-exclusao";
+import { AnamneseCard } from "@/components/clientes/anamnese-card";
 import {
   getClientePorId, atualizarCliente, excluirCliente, type Cliente,
 } from "@/lib/clientes";
@@ -356,6 +357,8 @@ export default function ClienteDetailPage() {
               </div>
             </div>
           )}
+
+          <AnamneseCard clienteId={clienteId} clienteNome={cliente.name} />
 
           {cliente.allergies.length > 0 && (
             <div className="bg-surface-lowest rounded-3xl p-6 shadow-ambient">

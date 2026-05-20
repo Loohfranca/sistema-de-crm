@@ -14,6 +14,7 @@ import { getAgendamentos, isoParaBR, type Agendamento } from "@/lib/store";
 import { ClienteFormModal } from "@/components/clientes/cliente-form-modal";
 import { ConfirmarExclusao } from "@/components/clientes/confirmar-exclusao";
 import { AniversariosSemana } from "@/components/clientes/aniversarios-semana";
+import { AnamnesesLista } from "@/components/clientes/anamneses-lista";
 
 function deriveStats(nome: string, agendamentos: Agendamento[]) {
   const alvo = nome.trim().toLowerCase();
@@ -56,6 +57,7 @@ function getTierBadge(tier: string) {
 export default function ClientesPage() {
   const [search, setSearch] = useState("");
   const [filterTier, setFilterTier] = useState("all");
+  const [aba, setAba] = useState<"lista" | "anamneses">("lista");
   const [clientList, setClientList] = useState<Client[]>([]);
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [modalCriar, setModalCriar] = useState(false);
@@ -152,6 +154,30 @@ export default function ClientesPage() {
         </button>
       </div>
 
+      {/* Abas */}
+      <div className="flex gap-2">
+        {([
+          { key: "lista", label: "Lista de clientes" },
+          { key: "anamneses", label: "Anamneses" },
+        ] as const).map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setAba(t.key)}
+            className={`px-4 py-2.5 rounded-2xl text-sm font-medium font-body transition-all ${
+              aba === t.key
+                ? "bg-primary-container text-on-primary-container"
+                : "bg-surface-high text-on-surface-variant hover:bg-surface-highest"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {aba === "anamneses" ? (
+        <AnamnesesLista />
+      ) : (
+        <>
       <AniversariosSemana />
 
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
@@ -259,6 +285,8 @@ export default function ClientesPage() {
           )}
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }
