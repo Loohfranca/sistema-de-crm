@@ -237,9 +237,18 @@ export default function Dashboard() {
     .filter((a) => a.data === hojeISO)
     .sort((a, b) => a.horaInicio - b.horaInicio || a.minutoInicio - b.minutoInicio);
 
-  const faturamentoHoje = todosHoje
-    .filter((a) => a.status === "realizado")
-    .reduce((acc, a) => acc + (a.valor || 0), 0);
+  // Faturamento do dia = soma dos pagamentos recebidos hoje (baixa feita hoje),
+  // independente da data do atendimento.
+  const faturamentoHoje = lista.reduce((acc, a) => {
+    if (!a.pagamento) return acc;
+    const p = a.pagamento as Record<string, unknown>;
+    if (Array.isArray(p.recebimentos)) {
+      for (const r of p.recebimentos as { valor: number; data: string }[]) {
+        if (r.data === hojeISO) acc += Number(r.valor) || 0;
+      }
+    }
+    return acc;
+  }, 0);
 
   const realizadosHoje = todosHoje.filter((a) => a.status === "realizado").length;
 
@@ -601,9 +610,10 @@ export default function Dashboard() {
 
           {/* cabeçalho — só desktop */}
           <div className="hidden md:grid grid-cols-12 px-5 py-2.5 bg-surface-low/40 border-b border-outline-variant/10">
-            <p className="col-span-5 text-[10px] font-semibold text-on-surface-variant font-body uppercase tracking-wider">Cliente</p>
-            <p className="col-span-4 text-[10px] font-semibold text-on-surface-variant font-body uppercase tracking-wider">Serviço</p>
+            <p className="col-span-4 text-[10px] font-semibold text-on-surface-variant font-body uppercase tracking-wider">Cliente</p>
+            <p className="col-span-3 text-[10px] font-semibold text-on-surface-variant font-body uppercase tracking-wider">Serviço</p>
             <p className="col-span-2 text-[10px] font-semibold text-on-surface-variant font-body uppercase tracking-wider">Hora</p>
+            <p className="col-span-2 text-[10px] font-semibold text-on-surface-variant font-body uppercase tracking-wider text-right">Valor</p>
             <p className="col-span-1 text-[10px] font-semibold text-on-surface-variant font-body uppercase tracking-wider text-right">Status</p>
           </div>
 
@@ -626,7 +636,7 @@ export default function Dashboard() {
                     className="grid grid-cols-12 items-center gap-3 px-5 py-3.5 hover:bg-surface-low/50 transition-colors group"
                   >
                     {/* Cliente + avatar */}
-                    <div className="col-span-12 md:col-span-5 flex items-center gap-3 min-w-0">
+                    <div className="col-span-12 md:col-span-4 flex items-center gap-3 min-w-0">
                       <div className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center font-display font-bold text-[11px] ${
                         apt.cor === "rose" ? "bg-rose-100 text-rose-900 dark:bg-rose-950/40 dark:text-rose-200" :
                         apt.cor === "gold" ? "bg-amber-100 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200" :
@@ -645,7 +655,7 @@ export default function Dashboard() {
                     </div>
 
                     {/* Serviço — desktop */}
-                    <p className="hidden md:block md:col-span-4 text-[11px] text-on-surface-variant font-body truncate">
+                    <p className="hidden md:block md:col-span-3 text-[11px] text-on-surface-variant font-body truncate">
                       {apt.procedimento}
                     </p>
 
@@ -658,6 +668,11 @@ export default function Dashboard() {
                         {String(apt.horaInicio).padStart(2,"0")}:{String(apt.minutoInicio).padStart(2,"0")}
                       </p>
                     </div>
+
+                    {/* Valor */}
+                    <p className="hidden md:block md:col-span-2 text-[11px] font-bold text-on-surface font-body tabular-nums text-right">
+                      {apt.valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                    </p>
 
                     {/* Status */}
                     <div className="col-span-12 md:col-span-1 flex md:justify-end">
