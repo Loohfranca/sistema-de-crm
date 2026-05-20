@@ -730,7 +730,7 @@ export default function Dashboard() {
                   {b.birthday}
                 </span>
                 <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${b.isToday ? "bg-primary" : "bg-outline-variant"}`} />
-                <p className={`flex-1 text-xs font-body truncate ${b.isToday ? "font-semibold text-on-surface" : "text-on-surface-variant"}`}>
+                <p className={`flex-1 text-xs font-body truncate text-on-surface ${b.isToday ? "font-semibold" : "font-medium"}`}>
                   {b.name}
                 </p>
                 <a
