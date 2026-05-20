@@ -3,7 +3,6 @@
 // substituídas no momento do envio.
 
 const TEMPLATE_KEY = "crm_whatsapp_template";
-const TEMPLATE_LEMBRETE_KEY = "crm_whatsapp_template_lembrete";
 const EVENT = "crm_whatsapp_template_updated";
 
 export const TEMPLATE_PADRAO = `Olá, {cliente}! 💖
@@ -17,28 +16,6 @@ Seu agendamento está confirmado:
 Qualquer coisa, é só me chamar por aqui. Até breve!
 
 — {clinica}`;
-
-export const TEMPLATE_LEMBRETE_PADRAO = `🔔 Olá, {cliente}!
-
-Lembrete: seu atendimento é daqui a 1 hora.
-
-📅 Hoje às {hora}
-✨ {procedimento}
-
-Te esperamos! Qualquer coisa, é só me chamar.
-
-— {clinica}`;
-
-export function getTemplateLembrete(): string {
-  if (typeof window === "undefined") return TEMPLATE_LEMBRETE_PADRAO;
-  return localStorage.getItem(TEMPLATE_LEMBRETE_KEY) ?? TEMPLATE_LEMBRETE_PADRAO;
-}
-
-export function salvarTemplateLembrete(template: string): void {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(TEMPLATE_LEMBRETE_KEY, template);
-  window.dispatchEvent(new Event(EVENT));
-}
 
 export interface VariavelDisponivel {
   key: string;

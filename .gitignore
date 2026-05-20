@@ -36,6 +36,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# referência de concorrentes (vídeos/frames — não versionar)
+/referencia
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

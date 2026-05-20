@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { WhatsAppSection } from "@/components/configuracoes/whatsapp-section";
+import { LembretesSection } from "@/components/configuracoes/lembretes-section";
 import { AparenciaSection } from "@/components/configuracoes/aparencia-section";
 
 export default function ConfiguracoesPage() {
@@ -249,6 +250,9 @@ export default function ConfiguracoesPage() {
 
           {/* WhatsApp */}
           <WhatsAppSection />
+
+          {/* Lembretes automáticos */}
+          <LembretesSection />
 
           {/* Integrations — futuras */}
           <div className="bg-surface-lowest rounded-3xl p-6 shadow-ambient">

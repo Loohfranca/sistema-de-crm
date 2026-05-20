@@ -1,20 +1,41 @@
 "use client";
 
 import { useEffect, useMemo, useState, useCallback } from "react";
-import { Bell, BellOff, MessageCircle, Clock, Check } from "lucide-react";
+import { Bell, BellOff, MessageCircle, Clock } from "lucide-react";
 import { getAgendamentos, type Agendamento } from "@/lib/store";
+import { renderMensagem, gerarLinkWhatsApp } from "@/lib/whatsapp";
 import {
-  getTemplateLembrete,
-  renderMensagem,
-  gerarLinkWhatsApp,
-} from "@/lib/whatsapp";
+  getRegras,
+  offsetMinutos,
+  descricaoQuando,
+  LEMBRETES_EVENT,
+  type RegraLembrete,
+} from "@/lib/lembretes";
 
-const ENVIADOS_KEY = "crm_lembretes_enviados_v1";
+const ENVIADOS_KEY = "crm_lembretes_enviados_v2";
 const NOTIF_PREF_KEY = "crm_notif_lembretes_v1";
 
+// ─── Tipos internos ──────────────────────────────────────────────────────────
+interface Pendente {
+  apt: Agendamento;
+  regra: RegraLembrete;
+  chave: string;
+  envioEm: number; // timestamp do momento ideal de envio
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-function chaveLembrete(apt: Agendamento): string {
-  return `${apt.data}-${apt.id}`;
+function aptInicioMs(apt: Agendamento): number {
+  const d = new Date(apt.data + "T00:00:00");
+  d.setHours(apt.horaInicio, apt.minutoInicio, 0, 0);
+  return d.getTime();
+}
+
+function chave(apt: Agendamento, regra: RegraLembrete): string {
+  return `${apt.data}-${apt.id}-${regra.id}`;
+}
+
+function formatarHora(apt: Agendamento): string {
+  return `${String(apt.horaInicio).padStart(2, "0")}:${String(apt.minutoInicio).padStart(2, "0")}`;
 }
 
 function getEnviados(): Set<string> {
@@ -27,25 +48,25 @@ function getEnviados(): Set<string> {
   }
 }
 
-function marcarEnviado(chave: string) {
+function marcarEnviado(c: string) {
   const set = getEnviados();
-  set.add(chave);
+  set.add(c);
   localStorage.setItem(ENVIADOS_KEY, JSON.stringify([...set]));
 }
 
-function minutosAteAgendamento(apt: Agendamento): number {
-  const agora = new Date();
-  const alvo = new Date(apt.data + "T00:00:00");
-  alvo.setHours(apt.horaInicio, apt.minutoInicio, 0, 0);
-  return Math.floor((alvo.getTime() - agora.getTime()) / 60000);
-}
-
-function formatarHora(apt: Agendamento): string {
-  return `${String(apt.horaInicio).padStart(2, "0")}:${String(apt.minutoInicio).padStart(2, "0")}`;
+// "em 2h 15min", "em 40 min", "enviar agora"
+function descreverPrazo(minutos: number): string {
+  if (minutos <= 0) return "enviar agora";
+  if (minutos < 60) return `em ${minutos} min`;
+  const h = Math.floor(minutos / 60);
+  const m = minutos % 60;
+  if (h < 24) return `em ${h}h${m ? ` ${m}min` : ""}`;
+  const d = Math.floor(h / 24);
+  return `em ${d} dia${d !== 1 ? "s" : ""}`;
 }
 
 // ─── Hook de notificação desktop ─────────────────────────────────────────────
-function useNotificacoesDesktop(proximos: Agendamento[]) {
+function useNotificacoesDesktop(proximos: Pendente[]) {
   const [permitido, setPermitido] = useState(false);
   const [habilitado, setHabilitado] = useState(false);
 
@@ -71,23 +92,23 @@ function useNotificacoesDesktop(proximos: Agendamento[]) {
     setHabilitado(false);
   }, []);
 
-  // Agenda notificações 1h antes pra cada upcoming (enquanto a aba estiver aberta)
+  // Dispara notificação no momento de envio de cada lembrete que vença
+  // dentro das próximas 3h (enquanto a aba estiver aberta).
   useEffect(() => {
     if (!permitido || !habilitado) return;
     const timers: ReturnType<typeof setTimeout>[] = [];
+    const agora = Date.now();
 
-    for (const apt of proximos) {
-      const minutos = minutosAteAgendamento(apt);
-      // Dispara 1h (60min) antes — só se ainda faltar mais que isso
-      const minutosAteDisparo = minutos - 60;
-      if (minutosAteDisparo > 0 && minutosAteDisparo <= 180) {
+    for (const p of proximos) {
+      const delay = p.envioEm - agora;
+      if (delay > 0 && delay <= 3 * 60 * 60 * 1000) {
         const t = setTimeout(() => {
-          new Notification(`Atendimento em 1 hora — ${apt.cliente}`, {
-            body: `${formatarHora(apt)} · ${apt.procedimento}`,
-            tag: chaveLembrete(apt),
+          new Notification(`Lembrete: ${p.apt.cliente}`, {
+            body: `${p.regra.nome} · ${p.apt.procedimento} ${formatarHora(p.apt)}`,
+            tag: p.chave,
             icon: "/favicon.ico",
           });
-        }, minutosAteDisparo * 60 * 1000);
+        }, delay);
         timers.push(t);
       }
     }
@@ -98,62 +119,88 @@ function useNotificacoesDesktop(proximos: Agendamento[]) {
   return { permitido, habilitado, solicitarPermissao, desativar };
 }
 
-// ─── Componente principal ───────────────────────────────────────────────────
+// ─── Componente principal ────────────────────────────────────────────────────
 export function LembretesProximos() {
   const [lista, setLista] = useState<Agendamento[]>([]);
+  const [regras, setRegras] = useState<RegraLembrete[]>([]);
   const [enviados, setEnviados] = useState<Set<string>>(new Set());
   const [agora, setAgora] = useState(() => Date.now());
 
   useEffect(() => {
     const carregar = () => {
       setLista(getAgendamentos());
+      setRegras(getRegras());
       setEnviados(getEnviados());
     };
     carregar();
     window.addEventListener("crm_agenda_updated", carregar);
-    // refresh "agora" a cada minuto pra reavaliar janela de 2h
+    window.addEventListener(LEMBRETES_EVENT, carregar);
+    // reavalia janelas de tempo a cada minuto
     const tick = setInterval(() => setAgora(Date.now()), 60000);
     return () => {
       window.removeEventListener("crm_agenda_updated", carregar);
+      window.removeEventListener(LEMBRETES_EVENT, carregar);
       clearInterval(tick);
     };
   }, []);
 
-  // Agendamentos nos próximos 120 minutos (não passou ainda, status agendado)
-  const proximos = useMemo(() => {
-    void agora; // dependência pra recalcular a cada minuto
-    return lista
-      .filter((a) => a.status === "agendado")
-      .filter((a) => {
-        const min = minutosAteAgendamento(a);
-        return min > 0 && min <= 120;
-      })
-      .sort(
-        (a, b) =>
-          a.horaInicio - b.horaInicio || a.minutoInicio - b.minutoInicio,
-      );
-  }, [lista, agora]);
+  // Lembretes pendentes: para cada regra ativa × agendamento, calcula o
+  // momento de envio e decide se já deve aparecer no painel.
+  const { pendentes, agendaveis } = useMemo(() => {
+    const now = agora;
+    const pend: Pendente[] = [];
+    const agend: Pendente[] = [];
+
+    for (const regra of regras) {
+      if (!regra.ativo) continue;
+      const offMs = offsetMinutos(regra) * 60000;
+
+      for (const apt of lista) {
+        const inicio = aptInicioMs(apt);
+        const envioEm = inicio - offMs;
+        const c = chave(apt, regra);
+        if (enviados.has(c)) continue;
+        const item: Pendente = { apt, regra, chave: c, envioEm };
+
+        if (regra.quando === "antes") {
+          if (apt.status !== "agendado") continue;
+          if (inicio <= now) continue; // atendimento já passou
+          // pendente: até 1h antes do momento de envio
+          if (envioEm - now <= 60 * 60000) pend.push(item);
+          else agend.push(item); // futuro — só para agendar notificação
+        } else {
+          if (apt.status !== "realizado") continue;
+          // pendente: do momento de envio até 48h depois
+          if (now >= envioEm && now <= envioEm + 48 * 3600000) pend.push(item);
+          else if (envioEm > now) agend.push(item);
+        }
+      }
+    }
+
+    pend.sort((a, b) => a.envioEm - b.envioEm);
+    return { pendentes: pend, agendaveis: [...pend, ...agend] };
+  }, [lista, regras, enviados, agora]);
 
   const { permitido, habilitado, solicitarPermissao, desativar } =
-    useNotificacoesDesktop(proximos);
+    useNotificacoesDesktop(agendaveis);
 
-  if (proximos.length === 0) return null;
+  if (pendentes.length === 0) return null;
 
-  function abrirLembrete(apt: Agendamento) {
-    if (!apt.telefone) return;
+  function abrirLembrete(p: Pendente) {
+    if (!p.apt.telefone) return;
     const ctx = {
-      cliente: apt.cliente,
-      dataISO: apt.data,
-      horaInicio: apt.horaInicio,
-      minutoInicio: apt.minutoInicio,
-      procedimento: apt.procedimento,
-      duracao: apt.duracao,
-      profissional: apt.profissional,
+      cliente: p.apt.cliente,
+      dataISO: p.apt.data,
+      horaInicio: p.apt.horaInicio,
+      minutoInicio: p.apt.minutoInicio,
+      procedimento: p.apt.procedimento,
+      duracao: p.apt.duracao,
+      profissional: p.apt.profissional,
     };
-    const msg = renderMensagem(getTemplateLembrete(), ctx);
-    const link = gerarLinkWhatsApp(apt.telefone, msg);
+    const msg = renderMensagem(p.regra.mensagem, ctx);
+    const link = gerarLinkWhatsApp(p.apt.telefone, msg);
     window.open(link, "_blank", "noopener,noreferrer");
-    marcarEnviado(chaveLembrete(apt));
+    marcarEnviado(p.chave);
     setEnviados(getEnviados());
   }
 
@@ -166,11 +213,11 @@ export function LembretesProximos() {
           </div>
           <div>
             <h3 className="font-display text-sm font-bold text-on-surface">
-              Lembretes próximos
+              Lembretes pendentes
             </h3>
             <p className="text-[11px] text-on-surface-variant font-body">
-              {proximos.length} atendimento{proximos.length !== 1 ? "s" : ""}{" "}
-              nas próximas 2 horas
+              {pendentes.length} lembrete{pendentes.length !== 1 ? "s" : ""}{" "}
+              para enviar
             </p>
           </div>
         </div>
@@ -178,7 +225,7 @@ export function LembretesProximos() {
           <button
             onClick={solicitarPermissao}
             className="text-[11px] font-semibold text-primary font-body hover:opacity-80 transition-opacity inline-flex items-center gap-1"
-            title="Receber notificação no desktop 1h antes"
+            title="Receber aviso no desktop na hora de cada lembrete"
           >
             <Bell className="w-3 h-3" />
             Ativar avisos
@@ -204,59 +251,50 @@ export function LembretesProximos() {
       </div>
 
       <div className="divide-y divide-outline-variant/10">
-        {proximos.map((apt) => {
-          const enviado = enviados.has(chaveLembrete(apt));
-          const minutos = minutosAteAgendamento(apt);
-          const faltam =
-            minutos < 60
-              ? `em ${minutos} min`
-              : `em ${Math.floor(minutos / 60)}h${minutos % 60 ? ` ${minutos % 60}min` : ""}`;
+        {pendentes.map((p) => {
+          const minutos = Math.floor((p.envioEm - agora) / 60000);
           return (
             <div
-              key={apt.id}
+              key={p.chave}
               className="flex items-center gap-3 px-5 py-3 hover:bg-surface-low/40 transition-colors"
             >
               <div className="w-9 h-9 shrink-0 rounded-full gradient-primary flex items-center justify-center text-on-primary font-display font-bold text-[11px]">
-                {apt.avatar}
+                {p.apt.avatar}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-bold text-on-surface font-body truncate">
-                  {apt.cliente}
+                  {p.apt.cliente}
                 </p>
                 <p className="text-[11px] text-on-surface-variant font-body truncate">
-                  {apt.procedimento}
+                  {p.apt.procedimento}
                 </p>
+                <span className="inline-flex items-center mt-1 px-1.5 py-0.5 rounded-full text-[9px] font-semibold font-body bg-primary/10 text-primary uppercase tracking-wider">
+                  {p.regra.nome} · {descricaoQuando(p.regra)}
+                </span>
               </div>
               <div className="shrink-0 text-right">
                 <p className="text-xs font-bold text-on-surface font-body tabular-nums inline-flex items-center gap-1">
                   <Clock className="w-3 h-3 text-primary" />
-                  {formatarHora(apt)}
+                  {formatarHora(p.apt)}
                 </p>
-                <p className="text-[10px] text-on-surface-variant font-body">
-                  {faltam}
+                <p
+                  className={`text-[10px] font-body ${
+                    minutos <= 0
+                      ? "text-primary font-semibold"
+                      : "text-on-surface-variant"
+                  }`}
+                >
+                  {descreverPrazo(minutos)}
                 </p>
               </div>
-              {apt.telefone ? (
+              {p.apt.telefone ? (
                 <button
-                  onClick={() => abrirLembrete(apt)}
-                  className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-[11px] font-semibold font-body transition-all ${
-                    enviado
-                      ? "bg-surface-high text-on-surface-variant"
-                      : "bg-[#25D366] text-white hover:opacity-90 shadow-sm"
-                  }`}
-                  title={enviado ? "Já enviado — reenviar" : "Enviar lembrete pelo WhatsApp"}
+                  onClick={() => abrirLembrete(p)}
+                  className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-[11px] font-semibold font-body bg-[#25D366] text-white hover:opacity-90 shadow-sm transition-all"
+                  title="Enviar lembrete pelo WhatsApp"
                 >
-                  {enviado ? (
-                    <>
-                      <Check className="w-3 h-3" />
-                      Enviado
-                    </>
-                  ) : (
-                    <>
-                      <MessageCircle className="w-3 h-3" />
-                      Lembrar
-                    </>
-                  )}
+                  <MessageCircle className="w-3 h-3" />
+                  Lembrar
                 </button>
               ) : (
                 <span className="shrink-0 text-[10px] text-outline font-body italic">
