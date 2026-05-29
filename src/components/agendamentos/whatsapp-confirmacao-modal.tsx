@@ -2,7 +2,7 @@
 
 import { motion } from "motion/react";
 import { useEffect, useState } from "react";
-import { Check, MessageCircle, X, Phone } from "lucide-react";
+import { MessageCircle, X, Phone } from "lucide-react";
 import {
   backdropTransition,
   backdropVariants,

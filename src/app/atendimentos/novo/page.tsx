@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Calendar,
-  Clock,
   User,
   Sparkles,
   X,

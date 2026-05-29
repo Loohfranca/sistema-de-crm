@@ -2,7 +2,6 @@
 
 import { useState, useMemo, useSyncExternalStore } from "react";
 import { motion } from "motion/react";
-import { Filter, Calendar } from "lucide-react";
 import {
   getLogs,
   subscribeLogs,

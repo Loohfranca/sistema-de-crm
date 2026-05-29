@@ -8,8 +8,6 @@ import {
   X,
   Pencil,
   CheckCircle2,
-  Power,
-  PowerOff,
   Trash2,
 } from "lucide-react";
 import {

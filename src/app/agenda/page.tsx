@@ -13,7 +13,6 @@ import {
   getWeekDates, fmtISO, timeStr, colorMap,
   DAY_NAMES, DAY_NAMES_FULL, MONTH_NAMES, HOURS, CELL_H,
 } from "@/lib/agenda-config";
-import { statusConfig } from "@/lib/agenda-config";
 import { MiniCalendar } from "@/components/agenda/mini-calendar";
 import { EventCard } from "@/components/agenda/event-card";
 import { SidePanel } from "@/components/agenda/side-panel";
